@@ -1,0 +1,98 @@
+---
+title: "Download and standarize election data"
+author: "Alejandro Reyes"
+date: "3/2/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+Downloading the data from wikipedia and oraculus.mx
+
+```{r sesgoEleccionUSA, eval=FALSE}
+
+library(htmltab)
+
+link2006 <- "https://es.wikipedia.org/wiki/Elecciones_federales_en_M%C3%A9xico_de_2006"
+encuestas2006 <- htmltab( doc = link2006, which = 23 ) #numeros magicos optimizados a prueba  error
+resultados2006 <- htmltab( doc = link2006, which=3 )
+save( encuestas2006, resultados2006, file="../data/datos_2006.rda" )
+
+link2012 <- "https://es.wikipedia.org/wiki/Elecciones_federales_en_M%C3%A9xico_de_2012"
+encuestas2012 <- htmltab( doc = link2012, which = 7 )
+
+resultados2012 <- htmltab( doc = link2012, which = 10 )
+save( encuestas2012, resultados2012, file="../data/datos_2012.rda" )
+
+```
+
+The code below standarizes the data.
+
+```{r standarizePolls}
+load("../data/datos_2006.rda")
+load("../data/datos_2012.rda")
+encuestas2018 <- read.csv("../data/efectiva-candidato-2018.csv")
+
+meses <- sprintf("%.2d", 1:12)
+names(meses) <- c( "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+           "septiembre", "octubre", "noviembre", "diciembre" )
+meses2 <- meses
+names(meses2) <- c( "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" )
+
+library(tidyverse)
+library(reshape2)
+library(cowplot)
+
+encuestas2006 <- encuestas2006 %>%
+  select( `Encuestadora`, `Fecha`, `Calderón`, `Madrazo`, `López Obrador` ) %>%
+  rename( `pollster`=`Encuestadora`, `Date`=`Fecha`, `RMP`=`Madrazo`, `FCH`=`Calderón`, `AMLO`=`López Obrador` ) %>%
+  mutate_at( setdiff( colnames( . ), c('pollster', 'Date') ), funs( as.numeric(.) ) ) %>%
+  mutate( Date=gsub("^(\\d*)\\s?(\\S+)\\s(\\d+)$", "\\3-\\2-\\1", tolower( gsub(" de", "", Date ) ) )) %>%
+  mutate( Date=gsub("-$", "-01", Date) ) %>%
+  mutate( Date=paste( gsub("-\\d+", "", Date ), 
+                      sprintf( "%.2d", as.numeric( gsub(".*-(\\d+)", "\\1", Date ) )), sep="-" ) ) %>%
+  mutate( Date=as.Date(sprintf( gsub( "-\\S+-", "-%s-", Date ), meses[gsub("\\d+-(\\S+)-.*", "\\1", Date)] ) ) )
+
+
+encuestas2012 <- encuestas2012 %>% 
+  select( `Encuestadora`, `Fecha`, `PAN: JVM`, `PRI-PVEM: EPN`, `PRD-MC-PT: AMLO` ) %>%
+  rename( `pollster`=`Encuestadora`, `Date`=`Fecha`, `JVM`=`PAN: JVM`, 
+          `EPN`=`PRI-PVEM: EPN`, `AMLO`=`PRD-MC-PT: AMLO` ) %>%
+  mutate_at( setdiff( colnames( . ), c('pollster', 'Date') ), funs( as.numeric(gsub("\\%", "", .) ) ) ) %>%
+  na.omit() %>%
+  mutate( Date = paste0( tolower(gsub( "^(\\S+)/(\\d+)$", "\\2-\\1", Date ) ), "-01" ) ) %>%
+  mutate( Date=as.Date(sprintf( gsub( "-\\S+-", "-%s-", Date ), meses[gsub("\\d+-(\\S+)-.*", "\\1", Date)] ) ))
+
+encuestas2018 <- encuestas2018 %>% 
+  select( `Encuestadora`, `Fecha`, `RAC`, `JAM`, `AMLO` ) %>%
+  rename( `pollster`=`Encuestadora`, `Date`=`Fecha` ) %>%
+  mutate( Date=gsub( "^(\\d+)\\s(\\S+)\\s(\\d+)$", "\\3-\\2-\\1", Date ) ) %>%
+  mutate( Date=as.Date(sprintf( gsub( "-\\S+-", "-%s-", Date ), meses2[gsub("\\d+-(\\S+)-.*", "\\1", Date)] ) ))
+
+resultados2006 <- resultados2006 %>% 
+  select( Candidato, Porcentaje ) %>%
+  unique() %>%
+  filter( !Candidato %in% c("Nulos", "Total", "Fuente:Instituto Federal Electoral.")  ) %>%
+  mutate( Porcentaje = as.numeric( gsub("%|\\s", "", Porcentaje )) ) %>%
+  mutate( Porcentaje = round( 100*Porcentaje / sum( Porcentaje ), 2) ) %>%
+  rename( `Candidate`=`Candidato`, `Result`=`Porcentaje`) %>%
+  filter( Result > 10 ) %>%
+  mutate( Candidate=c("FCH", "AMLO", "RMP") )
+
+resultados2012 <- resultados2012 %>% 
+  select( Candidato, Porcentaje ) %>%
+  unique() %>%
+  filter( !Candidato %in% c("No Registrados", "Nulos", "Total", "Fuente: Instituto Federal Electoral.")  ) %>%
+  mutate( Porcentaje = as.numeric( gsub("%|\\s", "", Porcentaje )) ) %>%
+  rename( `Candidate`=`Candidato`, `Result`=`Porcentaje`) %>%
+  filter( Result > 10 ) %>%
+  mutate( Candidate=c("EPN", "AMLO", "JVM") )
+
+save( encuestas2006, encuestas2012, 
+      encuestas2018, resultados2006, 
+      resultados2012, file="../data/standarizedData.rda" )
+
+```
