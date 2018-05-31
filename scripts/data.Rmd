@@ -47,8 +47,8 @@ library(reshape2)
 library(cowplot)
 
 encuestas2006 <- encuestas2006 %>%
-  select( `Encuestadora`, `Fecha`, `Calderón`, `Madrazo`, `López Obrador` ) %>%
-  rename( `pollster`=`Encuestadora`, `Date`=`Fecha`, `RMP`=`Madrazo`, `FCH`=`Calderón`, `AMLO`=`López Obrador` ) %>%
+  select( `Encuestadora`, `Fecha`, `Calderón`, `Madrazo`, `López Obrador`, `Mercado`, `Campa` ) %>%
+  rename( `pollster`=`Encuestadora`, `Date`=`Fecha`, `RMP`=`Madrazo`, `FCH`=`Calderón`, `AMLO`=`López Obrador`, `PM`=`Mercado`, `RCC`=`Campa`) %>%
   mutate_at( setdiff( colnames( . ), c('pollster', 'Date') ), funs( as.numeric(.) ) ) %>%
   mutate( Date=gsub("^(\\d*)\\s?(\\S+)\\s(\\d+)$", "\\3-\\2-\\1", tolower( gsub(" de", "", Date ) ) )) %>%
   mutate( Date=gsub("-$", "-01", Date) ) %>%
@@ -56,21 +56,22 @@ encuestas2006 <- encuestas2006 %>%
                       sprintf( "%.2d", as.numeric( gsub(".*-(\\d+)", "\\1", Date ) )), sep="-" ) ) %>%
   mutate( Date=as.Date(sprintf( gsub( "-\\S+-", "-%s-", Date ), meses[gsub("\\d+-(\\S+)-.*", "\\1", Date)] ) ) )
 
-
 encuestas2012 <- encuestas2012 %>% 
-  select( `Encuestadora`, `Fecha`, `PAN: JVM`, `PRI-PVEM: EPN`, `PRD-MC-PT: AMLO` ) %>%
+  select( `Encuestadora`, `Fecha`, `PAN: JVM`, `PRI-PVEM: EPN`, `PRD-MC-PT: AMLO`, `PANAL: GQ`) %>%
   rename( `pollster`=`Encuestadora`, `Date`=`Fecha`, `JVM`=`PAN: JVM`, 
-          `EPN`=`PRI-PVEM: EPN`, `AMLO`=`PRD-MC-PT: AMLO` ) %>%
+          `EPN`=`PRI-PVEM: EPN`, `AMLO`=`PRD-MC-PT: AMLO`, `GQT`=`PANAL: GQ`) %>%
   mutate_at( setdiff( colnames( . ), c('pollster', 'Date') ), funs( as.numeric(gsub("\\%", "", .) ) ) ) %>%
   na.omit() %>%
   mutate( Date = paste0( tolower(gsub( "^(\\S+)/(\\d+)$", "\\2-\\1", Date ) ), "-01" ) ) %>%
   mutate( Date=as.Date(sprintf( gsub( "-\\S+-", "-%s-", Date ), meses[gsub("\\d+-(\\S+)-.*", "\\1", Date)] ) ))
 
+
 encuestas2018 <- encuestas2018 %>% 
-  select( `Encuestadora`, `Fecha`, `RAC`, `JAM`, `AMLO` ) %>%
+  select( `Encuestadora`, `Fecha`, `RAC`, `JAM`, `AMLO`, `MZ`, `JRC`, `NR` ) %>%
   rename( `pollster`=`Encuestadora`, `Date`=`Fecha` ) %>%
   mutate( Date=gsub( "^(\\d+)\\s(\\S+)\\s(\\d+)$", "\\3-\\2-\\1", Date ) ) %>%
   mutate( Date=as.Date(sprintf( gsub( "-\\S+-", "-%s-", Date ), meses2[gsub("\\d+-(\\S+)-.*", "\\1", Date)] ) ))
+encuestas2018$pollster <- gsub("\\*$", "", as.character( encuestas2018$pollster ))
 
 resultados2006 <- resultados2006 %>% 
   select( Candidato, Porcentaje ) %>%
@@ -79,8 +80,7 @@ resultados2006 <- resultados2006 %>%
   mutate( Porcentaje = as.numeric( gsub("%|\\s", "", Porcentaje )) ) %>%
   mutate( Porcentaje = round( 100*Porcentaje / sum( Porcentaje ), 2) ) %>%
   rename( `Candidate`=`Candidato`, `Result`=`Porcentaje`) %>%
-  filter( Result > 10 ) %>%
-  mutate( Candidate=c("FCH", "AMLO", "RMP") )
+  mutate( Candidate=c("FCH", "AMLO", "RMP", "PM", "RCC") )
 
 resultados2012 <- resultados2012 %>% 
   select( Candidato, Porcentaje ) %>%
@@ -88,8 +88,7 @@ resultados2012 <- resultados2012 %>%
   filter( !Candidato %in% c("No Registrados", "Nulos", "Total", "Fuente: Instituto Federal Electoral.")  ) %>%
   mutate( Porcentaje = as.numeric( gsub("%|\\s", "", Porcentaje )) ) %>%
   rename( `Candidate`=`Candidato`, `Result`=`Porcentaje`) %>%
-  filter( Result > 10 ) %>%
-  mutate( Candidate=c("EPN", "AMLO", "JVM") )
+  mutate( Candidate=c("EPN", "AMLO", "JVM", "GQT") )
 
 save( encuestas2006, encuestas2012, 
       encuestas2018, resultados2006, 

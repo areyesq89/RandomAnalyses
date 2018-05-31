@@ -8,20 +8,24 @@ Having standarized the results, we can start exploring these data:
 ```{r, fig.height=2.5}
 
 load("../data/standarizedData.rda")
+encuestas2018$NR <- NULL
 
-plotPollsRes <- function( encuesta, resultados=NULL, fechaLim ){
+plotPollsRes <- function( encuesta, resultados=NULL, fechaLim, filter=NULL ){
   pl <- encuesta %>% 
     filter( Date >= fechaLim ) %>%
     melt( value.name="percent", id.vars=c("pollster", "Date")) %>% 
     group_by( variable ) %>%
-    summarize( mean=mean(percent), se=sd(percent)/sqrt(n()) ) %>%
+    summarize( mean=mean(percent, na.rm=TRUE), se=sd(percent, na.rm=TRUE)/sqrt(n()) ) %>%
     rename(`Candidate`=variable) %>% 
     mutate( type="encuestas" )
   if( !is.null( resultados ) ){
     resultados <- cbind( rename( resultados, mean=Result), se=NA, type="resultado")
     pl <- rbind( pl, resultados )
   }
-    mutate( pl, Candidate=fct_reorder(Candidate, mean, .desc = FALSE), 
+  if( !is.null( filter ) ){
+    pl <- filter( pl, mean > filter )
+  }
+  mutate( pl, Candidate=fct_reorder(Candidate, mean, .desc = FALSE), 
             start=mean-1.96*se, end=mean+1.96*se ) %>%
     ggplot( aes( Candidate, mean, col=type ) ) +
       geom_point(show.legend=TRUE) +
@@ -29,29 +33,26 @@ plotPollsRes <- function( encuesta, resultados=NULL, fechaLim ){
       labs( y="Porcentaje de votos", x="Candidato" )
 }
 
-encuesta <- encuestas2006
-fechaLim = "2006-06-01"
-resultados <- resultados2006
-
-
-pl <- plotPollsRes( encuestas2006, resultados2006, fechaLim="2006-06-01" ) +
-  ylim(22, 38) + ggtitle( "Elecciones MX 2006" ) + 
+pl <- plotPollsRes( encuestas2006, resultados2006, fechaLim="2006-06-01", filter=10) +
+  ylim(22, 38)  + ggtitle( "Elecciones MX 2006" ) + 
   labs(x="", col="") + 
   scale_x_discrete( labels = c("Madrazo", "Calderón", "AMLO") ) +
   theme(legend.pos="top") + scale_colour_manual(values=c("#4d4d4d","red"))
 
 save_plot(pl, file="elecciones2006_bias.png", base_aspect_ratio = 1.4, base_height=2.8)
 
-plotPollsRes( encuestas2012, resultados2012, fechaLim="2012-06-01" ) +
-  ggtitle( "2012")
+plotPollsRes( encuestas2012, resultados2012, fechaLim="2012-06-01", filter=10 ) +
+  ggtitle( "2012") 
 
 plotPollsRes( encuestas2018, fechaLim="2018-01-01") + 
-  ggtitle("2018") + ylim(10, 45)
+  ggtitle("2018") + ylim(0, 45)
 
 ```
 
 
 ```{r trendsOvertime}
+
+library(scales)
 
 encuesta <- encuestas2006
 
@@ -68,5 +69,14 @@ plotTrends( encuestas2006, fechaLim="2006-01-01" )
 plotTrends( encuestas2012, fechaLim="2012-01-01" )
 
 plotTrends( encuestas2018, fechaLim="2017-11-01" ) 
+
+encuestas2018b <- encuestas2018
+head( encuestas2018b )
+
+encuestas2018b <- encuestas2018b %>%
+  dplyr::mutate( `Todos - AMLO` = rowSums(.[,!grepl("AMLO|Date|pollster", colnames(.))], na.rm=TRUE)) %>%
+  dplyr::select( pollster, Date, AMLO, `Todos - AMLO` )
+
+plotTrends( encuestas2018b, fechaLim="2017-11-01") + ylim(20, 70) + scale_x_date(date_breaks = "4 week", date_labels = "%b %d") + theme( axis.text.x=element_text(angle=25, hjust=1) )
 
 ```
