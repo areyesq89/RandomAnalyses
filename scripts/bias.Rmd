@@ -50,7 +50,8 @@ plotPollsRes( encuestas2018, fechaLim="2018-01-01") +
 ```
 
 
-```{r trendsOvertime}
+
+```{r trendsOvertime, fig.width=3, fig.height=2}
 
 library(scales)
 
@@ -61,22 +62,36 @@ plotTrends <- function( encuesta, fechaLim=NULL ){
     rename( Candidato=variable ) %>%
     filter( Date >= fechaLim ) %>%
     ggplot( aes( Date, value, col=Candidato ) ) +
-    geom_point() + geom_smooth() + ylab("Porcentage de votos")
+    geom_point(size=0.6) + geom_smooth(lwd=.7) + ylab("Porcentage de votos")
 }
+
+debates <- as.Date(c("2018-04-22", "2018-05-20" ))
 
 plotTrends( encuestas2006, fechaLim="2006-01-01" )
 
 plotTrends( encuestas2012, fechaLim="2012-01-01" )
 
-plotTrends( encuestas2018, fechaLim="2017-11-01" ) 
+plotTrends( encuestas2018, fechaLim="2017-11-01" ) +
+  geom_vline(xintercept=debates, col="darkgrey") + 
+  geom_hline(yintercept=50, col="#6baed6") + 
+#  geom_rect(xmin=-Inf, xmax=Inf, ymin=50, ymax=Inf, col=NA, fill="#00000010", alpha=0.1) +
+  scale_x_date(date_breaks = "4 week", date_labels = "%b %d") + 
+  theme( axis.text.x=element_text(angle=25, hjust=1) ) 
+
 
 encuestas2018b <- encuestas2018
 head( encuestas2018b )
 
-encuestas2018b <- encuestas2018b %>%
-  dplyr::mutate( `Todos - AMLO` = rowSums(.[,!grepl("AMLO|Date|pollster", colnames(.))], na.rm=TRUE)) %>%
-  dplyr::select( pollster, Date, AMLO, `Todos - AMLO` )
+encuestas2018b <- encuestas2018 %>%
+  dplyr::mutate( `Todos menos AMLO` = rowSums(.[,!grepl("AMLO|Date|pollster", colnames(.))], na.rm=TRUE)) #%>%
+#  dplyr::select( pollster, Date, AMLO, `Todos - AMLO` )
 
-plotTrends( encuestas2018b, fechaLim="2017-11-01") + ylim(20, 70) + scale_x_date(date_breaks = "4 week", date_labels = "%b %d") + theme( axis.text.x=element_text(angle=25, hjust=1) )
+plotTrends( encuestas2018b, fechaLim="2017-11-01" ) +
+  geom_vline(xintercept=debates, col="darkgrey") + 
+  geom_hline(yintercept=50, col="#6baed6") + 
+#  geom_rect(xmin=-Inf, xmax=Inf, ymin=50, ymax=Inf, col=NA, fill="#00000010", alpha=0.1) +
+  scale_x_date(date_breaks = "4 week", date_labels = "%b %d") + 
+  theme( axis.text.x=element_text(angle=25, hjust=1) ) 
+
 
 ```

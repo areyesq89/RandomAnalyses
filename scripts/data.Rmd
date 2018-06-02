@@ -22,9 +22,10 @@ resultados2006 <- htmltab( doc = link2006, which=3 )
 save( encuestas2006, resultados2006, file="../data/datos_2006.rda" )
 
 link2012 <- "https://es.wikipedia.org/wiki/Elecciones_federales_en_M%C3%A9xico_de_2012"
-encuestas2012 <- htmltab( doc = link2012, which = 7 )
+encuestas2012 <- htmltab( doc = link2012, which = 8 )
 
-resultados2012 <- htmltab( doc = link2012, which = 10 )
+resultados2012 <- htmltab( doc = link2012, which = 11 )
+
 save( encuestas2012, resultados2012, file="../data/datos_2012.rda" )
 
 ```
