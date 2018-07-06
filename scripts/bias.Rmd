@@ -48,11 +48,14 @@ save_plot(pl, file="elecciones2006_bias.png", base_aspect_ratio = 1.4, base_heig
 plotPollsRes( encuestas2012, resultados2012, fechaLim="2012-06-01", filter=10 ) +
   ggtitle( "2012") 
 
-plotPollsRes( select( encuestas2018, -MZ), filter( resultados2018, Candidate != "MZ" ), fechaLim="2018-06-01") + 
-  ggtitle("2018") + ylim(0, 55) + ggtitle( "Elecciones MX 2006" ) + 
+pl <- 
+  plotPollsRes( 
+    select( encuestas2018, -MZ), filter( resultados2018, Candidate != "MZ" ), fechaLim="2018-05-01") + 
+  ggtitle("2018") + ylim(0, 55) + ggtitle( "Elecciones MX 2018" ) + 
   labs(x="", col="") + 
   scale_x_discrete( labels = c("Bronco", "Meade", "Anaya", "AMLO") ) +
   theme(legend.pos="top") + scale_colour_manual(values=c("#4d4d4d","red"))
+save_plot(pl, file="elecciones2018_bias.png", base_aspect_ratio = 1.2, base_height=4)
 
 ```
 
