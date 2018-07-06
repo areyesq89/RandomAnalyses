@@ -6,7 +6,12 @@ output:
 Having standarized the results, we can start exploring these data:
 
 ```{r, fig.height=2.5}
-
+library(magrittr)
+library(dplyr)
+library(reshape2)
+library(forcats)
+library(ggplot2)
+library(cowplot)
 load("../data/standarizedData.rda")
 encuestas2018$NR <- NULL
 
@@ -38,14 +43,16 @@ pl <- plotPollsRes( encuestas2006, resultados2006, fechaLim="2006-06-01", filter
   labs(x="", col="") + 
   scale_x_discrete( labels = c("Madrazo", "Calderón", "AMLO") ) +
   theme(legend.pos="top") + scale_colour_manual(values=c("#4d4d4d","red"))
-
 save_plot(pl, file="elecciones2006_bias.png", base_aspect_ratio = 1.4, base_height=2.8)
 
 plotPollsRes( encuestas2012, resultados2012, fechaLim="2012-06-01", filter=10 ) +
   ggtitle( "2012") 
 
-plotPollsRes( encuestas2018, fechaLim="2018-01-01") + 
-  ggtitle("2018") + ylim(0, 45)
+plotPollsRes( select( encuestas2018, -MZ), filter( resultados2018, Candidate != "MZ" ), fechaLim="2018-06-01") + 
+  ggtitle("2018") + ylim(0, 55) + ggtitle( "Elecciones MX 2006" ) + 
+  labs(x="", col="") + 
+  scale_x_discrete( labels = c("Bronco", "Meade", "Anaya", "AMLO") ) +
+  theme(legend.pos="top") + scale_colour_manual(values=c("#4d4d4d","red"))
 
 ```
 
@@ -65,7 +72,7 @@ plotTrends <- function( encuesta, fechaLim=NULL ){
     geom_point(size=0.6) + geom_smooth(lwd=.7) + ylab("Porcentage de votos")
 }
 
-debates <- as.Date(c("2018-04-22", "2018-05-20" ))
+debates <- as.Date(c("2018-04-22", "2018-05-20", "2018-06-04"))
 
 plotTrends( encuestas2006, fechaLim="2006-01-01" )
 
