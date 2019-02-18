@@ -1,0 +1,54 @@
+---
+title: "Exploratory analyses of FiveThirthyEight soccer rankings"
+output: html_document
+author: Alejandro Reyes
+---
+
+
+# The data
+
+The data was manually downloaded from this [link](https://data.fivethirtyeight.com/#soccer-spi).
+
+```{r}
+library(ggplot2)
+library(magrittr)
+library(tidyverse)
+
+soccerData <- read.csv("../data/soccer-spi/spi_global_rankings.csv")
+soccerData <- soccerData %>%
+  dplyr::mutate( country=gsub("^(\\S+)\\s.*", "\\1", league) ) %>%
+  dplyr::mutate( country=gsub("Barclays", "English", country) ) %>%
+  dplyr::mutate( country=gsub("Major|United", "US", country) ) %>%
+  dplyr::filter( !grepl("UEFA", league ))
+
+keepLeagues <- as.character( unique( soccerData %>%
+  dplyr::group_by( country, league ) %>%
+  dplyr::summarize( m=mean(spi) ) %>%
+  dplyr::arrange( desc(m) ) %>%
+  dplyr::group_by( country ) %>%
+  dplyr::do(head(., 1)) %>%
+  dplyr::pull( league ) ) )
+
+
+soccerData <- soccerData %>%
+  dplyr::filter( league %in% keepLeagues ) %>%
+  dplyr::mutate( league=gsub("Major League Soccer", "US Major League Soccer", league ) ) %>%
+  dplyr::mutate( league=gsub("Barclays Premier League", "English Premier League", league ) ) %>%
+  dplyr::mutate( league=gsub("Mexican Primera Division Torneo Apertura", "Mexican Primera Division", league) ) %>%
+  dplyr::mutate( league=gsub("Primera", "1", league) ) %>%
+  dplyr::mutate( suff=gsub("\\s(\\S)", "\\1", league ) ) %>%
+  dplyr::mutate( league=reorder( league, spi, function(x) {-1*median(x)} ) )
+```
+
+```{r, fig.width=1.2, fig.height=1.7}
+
+devtools::source_gist("1d1bdb00a7b3910d62bf3eec8a77b4a7")
+
+library(cowplot)
+soccerData %>%
+  dplyr::filter( grepl("Dutch|Mex|Port", league )) %>%
+  ggplot(aes( league, spi, col=league)) + 
+    geom_boxplot(outlier.shape=NA) +
+    geom_jitter(width=0.2, alpha=0.3) + 
+    theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5), legend.pos="none") + xlab("")
+```
