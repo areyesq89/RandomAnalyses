@@ -1,0 +1,50 @@
+---
+title: "Analysis de tweets de la cuenta @MeTooAcademicos"
+author: "Alejandro Reyes"
+output:
+  html_document
+---
+
+Tokens
+
+
+```{r, dpi=600, fig.height=3.5, fig.width=5}
+
+library(twitteR)
+library(magrittr)
+library(ggplot2)
+library(cowplot)
+
+source("twitterAuth.R")
+
+timeline <- userTimeline("MeTooAcademicos", 
+                         n = 5000, 
+                         includeRts = TRUE)
+
+texts <- vapply( timeline, function(x){ x$text }, character( 1 ) )
+
+days <- lapply(
+  seq_len( length(timeline) ), 
+  function(x){
+    as.character(as.Date(timeline[[x]]$created))
+  } )
+
+dfTweets <- data.frame( 
+  texts, 
+  hasUNAM=ifelse( grepl("UNAM", texts), "UNAM", "Otra" ), 
+  when=as.Date(unlist(days) ) )
+
+dfTweets$hasUNAM <- relevel(dfTweets$hasUNAM, 2)
+
+dfTweets %>%
+  dplyr::group_by( when, hasUNAM ) %>%
+  dplyr::summarize( sum=dplyr::n() ) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by( hasUNAM ) %>%
+  dplyr::mutate( cumSum=cumsum(sum) ) %>%
+  ggplot( aes( when, cumSum, col=hasUNAM ) ) +
+  geom_line(lwd=1.5) +
+  labs( x="Fecha", y="Número cumulativo de tweets", col="Universidad" )  +
+  ggtitle("Tweets de @MeTooAcademicos")
+
+```
