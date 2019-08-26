@@ -1,0 +1,265 @@
+---
+title: "Impact of UNAM's undergrad in Genomic Sciences on academic research"
+author: "Alejandro Reyes"
+date: "8/21/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, message = FALSE)
+```
+
+UNAM's [Undergrad program in Genomic Sciences](https://www.lcg.unam.mx/) (LCG, for its initials in spanish) was created with the objective of providing students with the necessary background to develop genomics research. The program has a very strict selection criteria, involving two exams and one interview. Classes are small (20 to 30 people) compared to other UNAM programs. The first students graduated in the 14th of August of 2009. I know that most *alumni* continue their education and further obtain masters and PhD degrees. Some of them enter prestigious PhD programs both in Mexico and abroad.  Perhaps the most accomplished *alumni*, academically speaking, are around 5 to 10 graduates that now lead independent research groups. I think most these research groups are based at [UNAM Juriquilla](http://www.campusjuriquilla.unam.mx/), Mexico. Others have accomplish a lot in their careers outside of academia. For example, [Mariana Matus](https://www.biobot.io/about_us.php) is the CEO of a startup company in Boston.
+
+In any case, the objective of this document is to measure the impact that LCG has had in academic research, measuring the number of publications from LCG *alumni* as well as the impact of these publications.
+
+# The data
+
+## List of LCG *alumni*
+
+In order to obtain the number of publication and citation statistics for each LCG alumni, I generated a google spreadsheet that contains each student graduated by August 23th of 2019. The list of graduates, along with the date of graduation, was obtained from the [LCG's website](https://www.lcg.unam.mx/titulados/). I manually filled the columns of the spreadsheet with Google Scholar identifiers and I tried to fill the class to which they belong when I could remember. I collected data for the first 6th classes that graduated from LCG. Then I got bored/tired and stopped. If anyone is interested in helping filling the spreadsheet further, please let me know. For now, the code below reads this compiled spreadsheet into `R`.
+
+```{r cars, eval=TRUE}
+library(googlesheets)
+gap <- gs_title( "GoogleGenomicos" ) ## you need to have this spreadsheet in your google drive and be logged in
+dat <- gs_read( gap )
+head( dat )
+```
+
+```{r}
+numbOfProfiles <- table( !is.na( dat$GoogleScholarID ) )
+maxIdx <- max(which( !is.na( dat$GoogleScholarID ) ))
+```
+
+Out of the data I compiled, I could find `r numbOfProfiles[["TRUE"]]` profiles, which correspond to 
+`r round( 100*(numbOfProfiles[["TRUE"]]/sum(numbOfProfiles)), 2)`\% of current graduates. These data corresponds to roughly `r round( 100*(numbOfProfiles[["TRUE"]]/maxIdx), 2 )` \% of the students from the first six classes. **Missing profiles are most probably not at random**, as people with more publications are more likely to have a Google Scholar profile. **This could result in inflated statistics and it is something to consider when reaching conclusions**.
+
+## Publication numbers and citations
+
+Having collected the google scholar identifiers for LCG alumni, I am using the *R CRAN* package called [scholar](https://cran.r-project.org/web/packages/scholar/index.html) to scramble the data for each google scholar profile. For each profile, I am obtaining the citation history, and the data of each of the publications. In each iteration, I am introducing `Sys.sleep` commands randomizing the number of seconds following normal distributions to sample waiting times between each query and avoid [*captchas*](https://es.wikipedia.org/wiki/Captcha).
+
+```{r pressure, echo=TRUE, eval=TRUE}
+library(scholar)
+
+googleIDs <- dat$GoogleScholarID
+googleIDs <- googleIDs[!is.na( googleIDs )]
+
+scholarDataFile <- "scholarData.rds"
+if( !file.exists(scholarDataFile) ){
+  scholarData <- lapply( googleIDs, function(x){
+    pubs <- try( get_publications(x) )
+    Sys.sleep( abs( rnorm(1, 10, 5) ) )## randomize waiting times to avoid captcha's
+    cits <- try( get_citation_history(x) )
+    Sys.sleep( abs( rnorm(1, 60, 20) ) )
+    list( pubRecord=pubs,
+          citHistory=cits )
+  } )
+  names( scholarData ) <- googleIDs
+  saveRDS( scholarData, file=scholarDataFile )
+}
+scholarData <- readRDS(scholarDataFile)
+
+```
+
+Then, I do some data wrangling to convert them to long-formatted data frames and start exploring these data. 
+
+```{r wrangling, warning=FALSE}
+pubRecords <- lapply( scholarData, "[[", "pubRecord" )
+citHistory <- lapply( scholarData, "[[", "citHistory" )
+
+stopifnot(all(vapply(pubRecords, class, character(1)) == "data.frame"))
+stopifnot(all(vapply(citHistory, class, character(1)) == "data.frame"))
+
+
+pubRecords <- purrr::map_df( pubRecords, ~as.data.frame(.x), .id="GoogleScholarID")
+citHistory <- purrr::map_df( citHistory, ~as.data.frame(.x), .id="GoogleScholarID")
+```
+
+# Publication records
+
+## Where do LCG alumni publish? 
+
+Where do LCG *alumni* publish? The code below computes the number of articles published in each journal. Then, it sorts the journals depending on the number of publications co-authored by LCG alumni. Below I am plotting the journals that appear most frequently among the publication profiles of LCG alumni. 
+
+```{r journals}
+library(magrittr)
+library(ggplot2)
+library(cowplot)
+
+pubRecords <- pubRecords %>%
+  dplyr::filter(journal != "")
+
+theme_set(theme_cowplot())
+pubPerJournal <- pubRecords %>%
+  dplyr::select( journal, cid ) %>%
+  unique() %>%
+  dplyr::group_by( journal=tolower(journal) ) %>%
+  dplyr::summarise( numb=dplyr::n() ) %>%
+  dplyr::arrange( desc(numb) ) %>%
+  dplyr::filter( numb > 7, journal != "" )
+
+pubPerJournal$journal <- forcats::fct_reorder(pubPerJournal$journal, pubPerJournal$numb, .desc=TRUE)
+
+levels(pubPerJournal$journal) <-
+  gsub("proceedings of the national academy of sciences", "pnas", levels( pubPerJournal$journal) )
+levels(pubPerJournal$journal) <-
+  gsub("the american journal of human genetics", "ajhg", levels( pubPerJournal$journal) )
+
+pubPerJournal %>%
+  ggplot( aes( journal, numb ) ) +
+  geom_point() +
+  theme(axis.text.x=element_text(angle=35, hjust=1)) +
+  labs(y="Number of publications", x="Journal")
+```
+
+It is interesting that LCG *alumni* appear in `r pubPerJournal$numb[pubPerJournal$journal == "biorxiv"]` biorXiv preprints, the same number of Nature and PLOS ONE papers. As a second group of journals, we have PNAS, Nucleic Acids Research and Nat Communications with an average of `r round(mean(pubPerJournal$numb[pubPerJournal$journal %in% c("nucleic acids research", "pnas", "nature communications")]))` papers.  Not surprisingly, the most frequent journals publish a lot of research in genomics. 
+
+## Number of publications of LCG *alumni*
+
+Now it is a good time to remember that our sample of profiles might be biased towards inflated publication numbers. Nevertheless, the histogram below shows the distribution on the number of publications per *alumnus*:
+
+```{r}
+pubRecords <- dplyr::left_join( pubRecords, dat )
+
+pubRecords %>%
+  dplyr::group_by( GoogleScholarID ) %>%
+  dplyr::summarize( number=dplyr::n(), graduation=unique(Graduation) ) %>%
+  ggplot(aes(number)) +
+  geom_histogram( bins=30 ) +
+  labs(x="Number of publications", y="Frequency")
+```
+
+The distribution above has a long tail. Obviously, the more time a person stays in research, the more publication that person will have. Thus, a more informative plot is one that also considers the date of graduation. To do so, I plotted the number of publications as a function of the years since graduation. 
+
+```{r}
+pubRecords %>%
+  dplyr::group_by( GoogleScholarID ) %>%
+  dplyr::summarize( number=dplyr::n(), graduation=unique(Graduation) ) %>%
+  dplyr::mutate( timeFromGrad=(Sys.Date()- graduation) ) %>%
+  ggplot( aes( timeFromGrad/30/12, number ) ) +
+  geom_point(alpha=0.5) +
+  labs(x="Time since graduation (years)", y="Number of publications")
+```
+
+There seems to be quite some variability. There is people that have many papers! The variability in the plot above could reflect differences in the collaborative environment between fields or institutions. For example, people working in more collaborative fields such as consortiums will have more papers. Who are the *alumni* with the highest number of publications? Below is top 10 ranking, which indicates us that the clear outlier from the plots above corresponds to [Claudia Gonzaga-Jauregui](https://scholar.google.com/citations?user=YMcmOsAAAAAJ&hl) from the first LCG class, who has co-authored `r sum( pubRecords$GoogleScholarID %in% "YMcmOsAAAAAJ" )` papers.
+
+
+```{r}
+pubRecords %>%
+  dplyr::group_by( GoogleScholarID ) %>%
+  dplyr::summarize( number=dplyr::n(), graduation=unique(Graduation), name=unique(Name) ) %>%
+  dplyr::arrange( desc(number) ) %>%
+  head(10)
+```
+
+## Fifth generation compared to others
+
+I have the feeling that my class, also known as [*La Quinta*](https://www.youtube.com/watch?v=kBpc3WZOubQ), has done better in publishing compared to other classes. In order to test this hypothesis, I filtered the data for only those *alumni* that graduated before the first alumni from the 5th class. To account for the time each person has spend in research, I compared the number of publications after 7 years of graduation. If we subject my feeling to hypothesis testing, we see that there is not a significant difference in the number of publications between *alumni* from *La Quinta* and other classes. My feeling seems to be only that: a feeling 
+
+```{r}
+
+pubRecords$year <- as.Date(paste0( pubRecords$year, "-01-01"))
+
+firstQuinto <- max(dat$Graduation[which(dat$Generation == 5)])
+
+pubRecords %>%
+  dplyr::filter( Graduation - firstQuinto < 0 | Generation == 5, year - Graduation < 365*7) %>%
+  dplyr::mutate( Generation=ifelse(Generation != 5 | is.na(Generation), "1st-4th", "5th") ) %>%
+  dplyr::group_by( GoogleScholarID ) %>%
+  dplyr::summarize( numbs=dplyr::n(), Generation=unique(Generation) ) %>%
+  wilcox.test( numbs ~ Generation, data=. )
+```
+
+# Impact of research as measured by citation numbers
+
+One way the impact of a publication is assessed is by the number citations in literature. Nevertheless, people have argued that the most impactful research is not reflected in the number of citations [^1] and the citation rates vary from field to field. For example, papers in human genomics are cited more frequently than plant genomics papers. Anyway, if we explore the distribution of citations per paper, we observed the typical distribution of citations counts, which has been the subject of some statistics papers[^2].
+
+[^1]: https://www.nature.com/news/citation-is-not-the-only-impact-1.22917
+[^2]: See for example: https://arxiv.org/pdf/0810.1426.pdf
+
+
+```{r}
+citHistory <- dplyr::left_join( citHistory, dat )
+citHistory$year <- as.Date(paste0( citHistory$year, "-12-31"))
+hist( pubRecords$cites, 100, xlab="Number of citations", main="" )
+```
+
+Below, I show the most cited papers co-authored by LCG *alumni*. The two first papers are consortium papers, one from the [International HapMap 3 Consortium](https://www.sanger.ac.uk/resources/downloads/human/hapmap3.html) and a review paper giving an overview of the [Bioconductor](https://www.bioconductor.org/) project. There is also a Science paper coauthored by two LCG alumni, [María Avila](http://liigh.unam.mx/profile/dra-maria-c-avila-arcos/) and [Victor Moreno-Mayar](https://scholar.google.com/citations?user=3khb6PYAAAAJ&hl), who have become leaders in the field of ancient DNA. 
+
+```{r}
+pubRecords %>%
+  dplyr::arrange( desc(cites) ) %>%
+  dplyr::select( title, journal, Name, cites ) %>%
+  as.data.frame() %>%
+  head(10)
+```
+
+If we aggregate the number of citations per alumni, the 10 most cited alumni are listed below.
+
+```{r}
+pubPerPerson <- pubRecords %>%
+  dplyr::group_by( GoogleScholarID ) %>%
+  dplyr::summarize( numPublications=dplyr::n() )
+citRates <- citHistory %>%
+  dplyr::group_by( GoogleScholarID, Name ) %>%
+  dplyr::summarize( numCitations=sum( cites ) )
+citRates %>%
+  dplyr::arrange( desc(numCitations) ) %>%
+  head(10)
+```
+
+Another way of doing this ranking is to consider the average number citations per publication for each alumni (i.e. dividing the number of citations over the number of publications). This operation is done by the code below. It turns out that I rank in the first place, this is because I co-authored the Bioconductor review mentioned above and [a paper](https://bioconductor.org/packages/release/bioc/html/DEXSeq.html) describing a statistical method that has been broadly used by the RNA-seq community. This ranking also brings [Jaime A Castro-Mondragon](http://folk.uio.no/jamondra/) to the top 10. Although he might have less papers than other top rankers (because he is much younger than the rest!), his work has been highly cited. 
+
+```{r}
+dplyr::left_join( citRates, pubPerPerson ) %>%
+  dplyr::mutate( rateCitations = numCitations/numPublications ) %>%
+  dplyr::arrange( desc(rateCitations) ) %>%
+  dplyr::filter( numPublications > 3 ) %>%
+  dplyr::select(Name, numPublications, numCitations, rateCitations) %>%
+  head(10)
+```
+
+Finally, I am plotting the cummulative number of citations per alumni as a function of the time since graduation from the LCG. Each line is one alumni and the red line is a [loess regression curve](https://en.wikipedia.org/wiki/Local_regression). As expected, the number of citations increases with time. 
+
+```{r}
+pr <- citHistory %>%
+  dplyr::mutate( timeFromGrad=as.numeric(year-Graduation) ) %>%
+  dplyr::group_by( GoogleScholarID ) %>%
+  dplyr::mutate( cumCites=cumsum(cites) )
+
+loessFit <- loess(cumCites~timeFromGrad, data=pr)
+
+citHistory %>%
+  dplyr::mutate( timeFromGrad=as.numeric(year-Graduation) ) %>%
+  dplyr::group_by( GoogleScholarID ) %>%
+  dplyr::mutate( cumCites=cumsum(cites) ) %>%
+  ggplot( aes( timeFromGrad/30/12, cumCites ) ) +
+  geom_point(alpha=0.6) + 
+  geom_smooth(col="red", fill="red") +
+  geom_line( aes(group=GoogleScholarID), alpha=0.2 ) +
+  scale_y_sqrt() +
+  labs(y="# of citations (cummulative)", x="Years from graduation from LCG")
+```
+
+According to the loess regression, the average alumni has around `r round(predict(loessFit, 365*7))` citations after 7 years of graduation. 
+
+# Conclusions
+
+**LCG's impact on academic research is demonstrated by `r length(unique(pubRecords$title))` manuscripts co-authored by *alumni* from the first six graduated classes**. Most of these papers are published in biology journals. Altogether, these `r length(unique(pubRecords$title))` papers have a total of `r as.integer(sum(unique(pubRecords[,c("title", "cites")])$cites))` citations and the median number of citations is `r median(unique(pubRecords[,c("title", "cites")])$cites)`. Note that the total number of papers and citations might be higher, since I only collected data from the first 6 classes and I was able to find google scholar profiles for less than 50% of the alumni that I searched.
+
+At LCG, we were often told that we are better than other undergrad programs. As a scientist I like to support my statements with data: although the number of publications from LCG *alumni* might sound as excellent numbers, **this analysis does not show that LCG alumni are better researchers than alumni from than other undergrad programs**. In order to do this comparison, we would need to compare data from people graduated from other programs and take into account differences between each field (for example, math papers are less cited than biology papers). 
+
+However, it is clear is that **genomics research has been benefited from the creation of LCG and that the investment in more research-focused undergrad programs will benefit academic research**.
+
+# Considerations and caveats of this analysis
+
+1. I am considering number of publications and citations to measure impact. This estimates **don't take into account other activities that are impactful, such as teaching, outreach and science communication**. 
+2. This analysis does not distinguish the degree of contributions to publications (e.g. first authorship, etc). It would be interesting to incorporate this information into the analysis. 
+3. As mentioned before, these numbers are taken from alumni that have google scholar profiles. As people with more publications will tend to have google scholar profiles, the averages presented in this analysis are likely to be overestimated.
+
+# sessionInfo()
+
+```{r}
+sessionInfo()
+```
+
