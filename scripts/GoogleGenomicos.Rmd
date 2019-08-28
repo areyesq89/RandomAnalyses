@@ -1,17 +1,21 @@
 ---
 title: "Impact of UNAM's undergrad in Genomic Sciences on academic research"
 author: "Alejandro Reyes"
-date: "8/21/2019"
-output: html_document
+date: 2019-07-27
+permalink: /posts/2019/07/001-lcg-impact/
+tags:
+  - lcg
+  - rstats
+  - datascience
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, message = FALSE)
 ```
 
-UNAM's [Undergrad program in Genomic Sciences](https://www.lcg.unam.mx/) (LCG, for its initials in Spanish) was created with the objective of providing students with the necessary background to develop genomics research. The program has a very strict selection criteria, involving two exams and one interview. Classes are small (20 to 30 people) compared to other UNAM programs. The first students graduated in the 14th of August of 2009. I know that most *alumni* continue their education and further obtain masters and PhD degrees. Some of them enter prestigious PhD programs both in Mexico and abroad.  Perhaps the most accomplished *alumni*, academically speaking, are around 5 to 10 graduates that now lead independent research groups. I think most these research groups are based at [UNAM Juriquilla](http://www.campusjuriquilla.unam.mx/), Mexico. Others have accomplish a lot in their careers outside of academia. For example, [Mariana Matus](https://www.biobot.io/about_us.php) is the CEO and co-founder of a start-up company in Boston.
+UNAM's [Undergrad program in Genomic Sciences](https://www.lcg.unam.mx/) (LCG, for its initials in Spanish) was created with the objective of providing students with the necessary background to develop genomics research. The program has a very strict selection criteria, involving two exams and one interview. Classes are small (20 to 30 people) compared to other UNAM programs. The first students graduated in August of 2009. I know that most *alumni* continue their education and further obtain masters and PhD degrees. Some of them enter prestigious PhD programs both in Mexico and abroad.  Perhaps the most accomplished *alumni*, academically speaking, are around 5 to 10 graduates that now lead independent research groups. I think most these research groups are based at [UNAM Juriquilla](http://www.campusjuriquilla.unam.mx/), Mexico. Others have accomplish a lot in their careers outside of academia. For example, [Mariana Matus](https://www.biobot.io/about_us.php) is the CEO and co-founder of a start-up company in Boston.
 
-In any case, the objective of this document is to measure the impact that LCG has had in academic research, measuring the number of publications from LCG *alumni* as well as the impact of these publications.
+In any case, the objective of this document is to assess the impact that LCG has had in academic research, calculating the number of publications from LCG *alumni* as well as the impact of these publications.
 
 # The data
 
@@ -26,7 +30,7 @@ dat <- gs_read( gap )
 head( dat )
 ```
 
-```{r}
+```{r, echo=FALSE}
 numbOfProfiles <- table( !is.na( dat$GoogleScholarID ) )
 maxIdx <- max(which( !is.na( dat$GoogleScholarID ) ))
 ```
@@ -119,7 +123,7 @@ It is interesting that LCG *alumni* appear in `r pubPerJournal$numb[pubPerJourna
 
 Now it is a good time to remember that our sample of profiles might be biased towards inflated publication numbers. Nevertheless, the histogram below shows the distribution on the number of publications per *alumnus*:
 
-```{r}
+```{r pubHist}
 pubRecords <- dplyr::left_join( pubRecords, dat )
 
 pubRecords %>%
@@ -132,13 +136,14 @@ pubRecords %>%
 
 The distribution above has a long tail. Obviously, the more time a person stays in research, the more publications that person will have. Thus, a more informative plot is one that also considers the date of graduation. To do so, I plotted the number of publications as a function of the years since graduation. 
 
-```{r}
+```{r scatterpub}
 pubRecords %>%
   dplyr::group_by( GoogleScholarID ) %>%
   dplyr::summarize( number=dplyr::n(), graduation=unique(Graduation) ) %>%
   dplyr::mutate( timeFromGrad=(Sys.Date()- graduation) ) %>%
   ggplot( aes( timeFromGrad/30/12, number ) ) +
   geom_point(alpha=0.5) +
+  geom_smooth(method="lm") +
   labs(x="Time since graduation (years)", y="Number of publications")
 ```
 
@@ -179,7 +184,7 @@ One way the impact of a publication is assessed is by the number citations in li
 [^2]: See for example: https://arxiv.org/pdf/0810.1426.pdf
 
 
-```{r}
+```{r histcit2}
 citHistory <- dplyr::left_join( citHistory, dat )
 citHistory$year <- as.Date(paste0( citHistory$year, "-12-31"))
 hist( pubRecords$cites, 100, xlab="Number of citations", main="" )
@@ -221,9 +226,9 @@ dplyr::left_join( citRates, pubPerPerson ) %>%
   head(10)
 ```
 
-Finally, I am plotting the cumulative number of citations per *alumni* as a function of the time since graduation from the LCG. Each line is one *alumni* and the red line is a [loess regression curve](https://en.wikipedia.org/wiki/Local_regression). As expected, the number of citations increases with time. 
+Finally, I am plotting the cumulative number of citations per *alumni* as a function of the time since graduation from the LCG. Each line is one *alumnus* and the red line is a [loess regression curve](https://en.wikipedia.org/wiki/Local_regression). As expected, the number of citations increases with time. 
 
-```{r}
+```{r scatcit}
 pr <- citHistory %>%
   dplyr::mutate( timeFromGrad=as.numeric(year-Graduation) ) %>%
   dplyr::group_by( GoogleScholarID ) %>%
