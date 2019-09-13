@@ -2,32 +2,26 @@
 title: "Impact of UNAM's undergrad in Genomic Sciences on academic research"
 author: "Alejandro Reyes"
 date: 2019-07-27
-permalink: /posts/2019/07/001-lcg-impact/
-tags:
-  - lcg
-  - rstats
-  - datascience
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, message = FALSE)
 ```
 
-UNAM's [Undergrad program in Genomic Sciences](https://www.lcg.unam.mx/) (LCG, for its initials in Spanish) was created with the objective of providing students with the necessary background to develop genomics research. The program has a very strict selection criteria, involving two exams and one interview. Classes are small (20 to 30 people) compared to other UNAM programs. The first students graduated in August of 2009. I know that most *alumni* continue their education and further obtain masters and PhD degrees. Some of them enter prestigious PhD programs both in Mexico and abroad.  Perhaps the most accomplished *alumni*, academically speaking, are around 5 to 10 graduates that now lead independent research groups. I think most these research groups are based at [UNAM Juriquilla](http://www.campusjuriquilla.unam.mx/), Mexico. Others have accomplish a lot in their careers outside of academia. For example, [Mariana Matus](https://www.biobot.io/about_us.php) is the CEO and co-founder of a start-up company in Boston.
+UNAM's [Undergrad program in Genomic Sciences](https://www.lcg.unam.mx/) (LCG, for its initials in Spanish) was created with the objective of providing students with the necessary background to develop genomics research. The program has a very stringent selection criteria, involving two exams and one interview. Classes are small (20 to 30 people) compared to other UNAM programs. The first students graduated in August of 2009. I know that most *alumni* continue their education and further obtain masters and PhD degrees. Some of them enter prestigious PhD programs both in Mexico and abroad.  Perhaps the most accomplished *alumni*, academically speaking, are around 5 to 10 graduates that now lead independent research groups. I think most these research groups are based at [UNAM Juriquilla](http://www.campusjuriquilla.unam.mx/), Mexico. Others have accomplish a lot in their careers outside of academia. For example, [Mariana Matus](https://www.biobot.io/about_us.php) is the CEO and co-founder of a start-up company in Boston.
 
-In any case, the objective of this document is to assess the impact that LCG has had in academic research, calculating the number of publications from LCG *alumni* as well as the impact of these publications.
+In any case, the objective of this document is to assess the impact that LCG has had on academic research, calculating the number of publications from LCG *alumni* as well as the impact of these publications.
 
 # The data
 
 ## List of LCG *alumni*
 
-In order to obtain the number of publication and citation statistics for each LCG alumni, I generated a Google spreadsheet that contains each student graduated by August 23th of 2019. The list of graduates, along with the date of graduation, was obtained from the [LCG's website](https://www.lcg.unam.mx/titulados/). I manually filled the columns of the spreadsheet with Google Scholar identifiers and I tried to fill the class to which they belong when I could remember. I collected data for the first 6th classes that graduated from LCG. Then I got bored/tired and stopped. If anyone is interested in helping filling the spreadsheet further, please let me know. For now, the code below reads this compiled spreadsheet into `R`.
+In order to obtain the number of publications and citation statistics for each LCG alumni, I generated a Google spreadsheet that contains each student graduated by August 23th of 2019. The list of graduates, along with the date of graduation, was obtained from the [LCG's website](https://www.lcg.unam.mx/titulados/). I manually filled the columns of the spreadsheet with Google Scholar identifiers and I tried to fill the class to which they belong when I could remember. I collected data for the first 6 classes that graduated from LCG. Then I got bored/tired and stopped. If anyone is interested in helping filling the spreadsheet further, please let me know. For now, the code below reads this compiled spreadsheet into `R`.
 
 ```{r cars, eval=TRUE}
 library(googlesheets)
 gap <- gs_title( "GoogleGenomicos" ) ## you need to have this spreadsheet in your google drive and be logged in
 dat <- gs_read( gap )
-head( dat )
 ```
 
 ```{r, echo=FALSE}
@@ -40,7 +34,7 @@ Out of the data I compiled, I could find `r numbOfProfiles[["TRUE"]]` profiles, 
 
 ## Publication numbers and citations
 
-Having collected the Google scholar identifiers for LCG alumni, I am using the *R CRAN* package called [scholar](https://cran.r-project.org/web/packages/scholar/index.html) to scramble the data for each Google scholar profile. For each profile, I am obtaining the citation history, and the data of each of the publications. In each iteration, I am introducing `Sys.sleep` commands randomizing the number of seconds following normal distributions to sample waiting times between each query in order to avoid [*captchas*](https://es.wikipedia.org/wiki/Captcha).
+Having collected the Google scholar identifiers for LCG alumni, I am using the *R CRAN* package called [scholar](https://cran.r-project.org/web/packages/scholar/index.html) to scrape the data for each Google scholar profile. For each profile, I am obtaining the citation history, and the data of each of the publications. In order to avoid [*captchas*](https://es.wikipedia.org/wiki/Captcha), I am sampling numbers following normal distributions to use them as waiting times between each query.
 
 ```{r pressure, echo=TRUE, eval=TRUE}
 library(scholar)
@@ -51,8 +45,9 @@ googleIDs <- googleIDs[!is.na( googleIDs )]
 scholarDataFile <- "scholarData.rds"
 if( !file.exists(scholarDataFile) ){
   scholarData <- lapply( googleIDs, function(x){
+    print(x)
     pubs <- try( get_publications(x) )
-    Sys.sleep( abs( rnorm(1, 10, 5) ) )## randomize waiting times to avoid captcha's
+    Sys.sleep( abs( rnorm(1, 0, 5) ) )## randomize waiting times to avoid captcha's
     cits <- try( get_citation_history(x) )
     Sys.sleep( abs( rnorm(1, 60, 20) ) )
     list( pubRecord=pubs,
@@ -79,6 +74,64 @@ pubRecords <- purrr::map_df( pubRecords, ~as.data.frame(.x), .id="GoogleScholarI
 citHistory <- purrr::map_df( citHistory, ~as.data.frame(.x), .id="GoogleScholarID")
 ```
 
+
+```{r}
+library(easyPubMed)
+my_field <- "[Title]"
+
+pubRecords$titleMod <- gsub("’|‘", "'", pubRecords$title)
+#pubRecords$titleMod <- gsub( "[[:punct:]] ", " ", pubRecords$titleMod )
+
+pubRecords$titleMod <- gsub( "[[:punct:]]{1,} ", " ", pubRecords$titleMod )
+
+pubRecords$titleMod <- gsub( "\\(|\\)", "", pubRecords$titleMod )
+unwanted_array = list('Š'='S', 'š'='s', 'Ž'='Z', 'ž'='z', 'À'='A', 'Á'='A', 'Â'='A', 'Ã'='A', 'Ä'='A', 'Å'='A', 'Æ'='A', 'Ç'='C', 'È'='E', 'É'='E', 'Ê'='E', 'Ë'='E', 'Ì'='I', 'Í'='I', 'Î'='I', 'Ï'='I', 'Ñ'='N', 'Ò'='O', 'Ó'='O', 'Ô'='O', 'Õ'='O', 'Ö'='O', 'Ø'='O', 'Ù'='U', 'Ú'='U', 'Û'='U', 'Ü'='U', 'Ý'='Y', 'Þ'='B', 'ß'='Ss', 'à'='a', 'á'='a', 'â'='a', 'ã'='a', 'ä'='a', 'å'='a', 'æ'='a', 'ç'='c', 'è'='e', 'é'='e', 'ê'='e', 'ë'='e', 'ì'='i', 'í'='i', 'î'='i', 'ï'='i', 'ð'='o', 'ñ'='n', 'ò'='o', 'ó'='o', 'ô'='o', 'õ'='o', 'ö'='o', 'ø'='o', 'ù'='u', 'ú'='u', 'û'='u', 'ý'='y', 'ý'='y', 'þ'='b', 'ÿ'='y' )
+pubRecords$titleMod <- chartr(paste(names(unwanted_array), collapse=''),
+         paste(unwanted_array, collapse=''),
+         pubRecords$titleMod )
+pubRecords$titleMod <- iconv(pubRecords$titleMod, "latin1", "ASCII", sub="")
+pubRecords$titleMod <- gsub( " \\S ", " ", pubRecords$titleMod )
+pubRecords$titleMod <- gsub("\\s{2,}", " ", pubRecords$titleMod)
+allQueries <- unique( pubRecords$titleMod )
+
+
+
+if(!file.exists("pubmedSearchesData.rds")){
+  pubmedSearches <- lapply( seq_along(allQueries), function(x){
+    my_query <- allQueries[[x]]
+    res_02 <- try(get_pubmed_ids_by_fulltitle(my_query, field = my_field))
+    if( !inherits( res_02, "try-error" ) ){
+      nm <- as.numeric(res_02$Count)
+    }else{
+      nm <- NA
+    }
+    cat(sprintf("Processed %d of %d, num= %d: %s\n", x, length(allQueries), nm, my_query) )
+    Sys.sleep( round( abs(rnorm(1, 30, 10) ) ) )
+    res_02
+  } )
+  while( length( fails <- which( vapply( pubmedSearches, function(x){ inherits(x, "try-error") }, logical(1) ) ) ) > 0 ){
+    for( i in fails ){
+      print( allQueries[i] )
+      pubmedSearches[[i]] <- try( get_pubmed_ids_by_fulltitle( allQueries[i], field = my_field ) )
+      Sys.sleep( round( abs(rnorm(1, 30, 10)) ) )
+    }
+  }
+  names( pubmedSearches ) <- allQueries
+  saveRDS(pubmedSearches, file="pubmedSearchesData.rds")
+}
+pubmedSearches <- readRDS("pubmedSearchesData.rds")
+
+pubmedDat <- data.frame( 
+  titleMod=allQueries, 
+  pubmedHitNum=vapply( pubmedSearches, function(x){ as.numeric(x$Count) }, numeric(1) ) )
+
+library(magrittr)
+
+pubRecords <- pubRecords %>%
+  dplyr::left_join( pubmedDat )
+
+  
+```
 # Publication records
 
 ## Where do LCG *alumni* publish? 
@@ -93,8 +146,12 @@ library(cowplot)
 pubRecords <- pubRecords %>%
   dplyr::filter(journal != "")
 
+pubRecords <- pubRecords %>%
+  dplyr::filter( grepl("biorxiv|arxiv|peerj preprints|psyarxiv", tolower(journal)) | pubmedHitNum == 1 )
+
 theme_set(theme_cowplot())
 pubPerJournal <- pubRecords %>%
+  dplyr::filter( !duplicated(tolower(title)) ) %>%
   dplyr::select( journal, cid ) %>%
   unique() %>%
   dplyr::group_by( journal=tolower(journal) ) %>%
@@ -114,7 +171,7 @@ pubPerJournal %>%
   geom_point() +
   theme(axis.text.x=element_text(angle=35, hjust=1)) +
   labs(y="Number of publications", x="Journal") +
-  ylim(0, 29)
+  ylim(0, 40)
 ```
 
 It is interesting that LCG *alumni* appear in `r pubPerJournal$numb[pubPerJournal$journal == "biorxiv"]` biorXiv preprints, the same number of Nature and PLOS ONE papers. As a second group of journals, we have PNAS, Nucleic Acids Research and Nat Communications with an average of `r round(mean(pubPerJournal$numb[pubPerJournal$journal %in% c("nucleic acids research", "pnas", "nature communications")]))` papers.  Not surprisingly, the most frequent journals publish a lot of research in genomics. 
@@ -143,7 +200,6 @@ pubRecords %>%
   dplyr::mutate( timeFromGrad=(Sys.Date()- graduation) ) %>%
   ggplot( aes( timeFromGrad/30/12, number ) ) +
   geom_point(alpha=0.5) +
-  geom_smooth(method="lm") +
   labs(x="Time since graduation (years)", y="Number of publications")
 ```
 
@@ -158,6 +214,8 @@ pubRecords %>%
   head(10)
 ```
 
+
+
 ## Fifth generation compared to others
 
 I have the feeling that my class, also known as [*La Quinta*](https://www.youtube.com/watch?v=kBpc3WZOubQ), has done better in publishing compared to other classes. In order to test this hypothesis, I filtered the data for only those *alumni* that graduated before the first *alumni* from the 5th class. To account for the time each person has spent in research, I compared the number of publications after 7 years of graduation. If we subject my feeling to hypothesis testing, we see that there is not a significant difference in the number of publications between *alumni* from *La Quinta* and other classes. My feeling seems to be only that: a feeling.
@@ -166,14 +224,14 @@ I have the feeling that my class, also known as [*La Quinta*](https://www.youtub
 
 pubRecords$year <- as.Date(paste0( pubRecords$year, "-01-01"))
 
-firstQuinto <- max(dat$Graduation[which(dat$Generation == 5)])
+firstQuinto <- max(dat$Graduation[which(dat$Cohort == 5)])
 
 pubRecords %>%
-  dplyr::filter( Graduation - firstQuinto < 0 | Generation == 5, year - Graduation < 365*7) %>%
-  dplyr::mutate( Generation=ifelse(Generation != 5 | is.na(Generation), "1st-4th", "5th") ) %>%
+  dplyr::filter( Graduation - firstQuinto < 0 | Cohort == 5, year - Graduation < 365*7) %>%
+  dplyr::mutate( Cohort=ifelse(Cohort != 5 | is.na(Cohort), "1st-4th", "5th") ) %>%
   dplyr::group_by( GoogleScholarID ) %>%
-  dplyr::summarize( numbs=dplyr::n(), Generation=unique(Generation) ) %>%
-  wilcox.test( numbs ~ Generation, data=. )
+  dplyr::summarize( numbs=dplyr::n(), Cohort=unique(Cohort) ) %>%
+  wilcox.test( numbs ~ Cohort, data=. )
 ```
 
 # Impact of research as measured by citation numbers
@@ -251,9 +309,39 @@ citHistory %>%
 
 According to the loess regression, the average *alumni* has around `r round(predict(loessFit, 365*7))` citations after 7 years of graduation. 
 
+## Aggregated h-index
+
+The code below computes the [h-index](https://en.wikipedia.org/wiki/H-index), aggregating the publications of all LCG *alumni*. 
+
+```{r hindex1, echo=TRUE}
+hIndexForm <- pubRecords %>%
+  dplyr::filter( !duplicated(tolower(title) ) ) %>%
+  dplyr::arrange( desc( cites ) ) %>%
+  dplyr::select( cites ) %>%
+  dplyr::mutate( index=seq_len(dplyr::n()), minF=pmin(cites, index)) %>%
+  dplyr::arrange(desc(minF)) %>%
+  dplyr::slice(1) %>%
+  dplyr::pull(index)
+```
+
+```{r hindex2, echo=FALSE}
+hIndex <- pubRecords %>%
+  dplyr::filter( !duplicated(tolower(title) ) ) %>%
+  dplyr::arrange( desc( cites ) ) %>%
+  dplyr::select( cites ) %>%
+  dplyr::mutate( index=seq_len(dplyr::n()) ) %>%
+  dplyr::filter( !index > cites ) %>%
+  tail(1) %>%
+  dplyr::pull(index)
+
+stopifnot( hIndex == hIndexForm )
+```
+
+It turns out that the aggregates h-index for LCG alumni is `r hIndex`.
+
 # Conclusions
 
-**LCG's impact on academic research is demonstrated by `r length(unique(pubRecords$title))` manuscripts co-authored by *alumni* from the first six graduated classes**. Most of these papers are published in biology journals. Altogether, these `r length(unique(pubRecords$title))` papers have a total of `r as.integer(sum(unique(pubRecords[,c("title", "cites")])$cites))` citations and the median number of citations is `r median(unique(pubRecords[,c("title", "cites")])$cites)`. Note that the total number of papers and citations might be higher, since I only collected data from the first 6 classes and I was able to find Google scholar profiles for less than 50% of the *alumni* that I searched for.
+**LCG's impact on academic research is demonstrated by `r length(unique(tolower(pubRecords$title)))` manuscripts co-authored by *alumni* from the first six graduated classes**. Most of these papers are published in biology journals. Altogether, these `r length(unique(tolower(pubRecords$title)))` papers have a total of `r as.integer(sum(unique(pubRecords[,c("title", "cites")])$cites))` citations and the median number of citations is `r median(unique(pubRecords[,c("title", "cites")])$cites)`. Note that the total number of papers and citations might be higher, since I only collected data from the first 6 classes and I was able to find Google scholar profiles for less than 50% of the *alumni* that I searched for.
 
 At LCG, we were often told that we are better than other undergrad programs. As a scientist I like to support my statements with data: although the number of publications from LCG *alumni* might sound as excellent numbers, **this analysis does not show that LCG *alumni* are better researchers than *alumni* from than other undergrad programs**. In order to do this comparison, we would need to compare data from people graduated from other programs and normalize for differences between fields (for example, math papers are less cited than biology papers). 
 
