@@ -1,0 +1,390 @@
+
+```{r}
+library(rvest)
+
+
+parseWikiCatalogEn <- function( wikiPage, ex1="página", ex2="anterior", nextPageLab="página siguiente", pagePre="https://es.wikipedia.org"){
+  mascNames <- c()
+  keepFlag <- 1
+  while( keepFlag > 0 ){
+    pageNames <- wikiPage %>% 
+      read_html %>% 
+      html_node('body #content #bodyContent #mw-content-text #mw-pages') %>% 
+      html_text
+    if( grepl("previous|anterior", pageNames) ){
+      pageNames <- strsplit( pageNames, sprintf("\\(%s|%s\\)", ex1, ex2))[[1]][4]
+    }else{
+      pageNames <- strsplit(pageNames, "more\\)\\.\n")[[1]][2]
+    } ### fix
+    pageNames <- strsplit( pageNames, "\n" )[[1]]
+    pageNames <- gsub("[A-Z]{1}$", "", pageNames)
+    pageNames <- gsub("siguiente\\)", "", pageNames)
+    mascNames <- c(mascNames, pageNames)
+    Sys.sleep(2)
+    posNodes <- wikiPage %>% 
+      read_html %>% 
+      html_nodes('body #content #bodyContent #mw-content-text #mw-pages > a')
+    posText <- posNodes %>% html_text
+    posUrl <- posNodes %>% html_attr("href")
+    nextLink <- which(posText == nextPageLab )
+    if( length(nextLink) > 0 ){
+      keepFlag <- 1
+      }else{
+      keepFlag <- 0
+      }
+    wikiPage <- unique(posUrl[nextLink])
+    wikiPage <- paste0( pagePre, wikiPage )
+    Sys.sleep(2)
+  }
+  mascNames <- mascNames[!(mascNames == " "|mascNames == "")]
+  mascNames
+}
+
+maleWikiLink <- "https://es.wikipedia.org/w/index.php?title=Categor%C3%ADa:Nombres_masculinos&pageuntil=Columbano+%28nombre%29#mw-pages"
+femaleWikiLink <- "https://es.wikipedia.org/w/index.php?title=Categor%C3%ADa:Nombres_femeninos&pageuntil=Idoya#mw-pages"
+maleNames <- parseWikiCatalogEn( maleWikiLink )
+femaleNames <- parseWikiCatalogEn( femaleWikiLink )
+femaleNamesExt <- lapply(
+  c( italian="https://en.wikipedia.org/w/index.php?title=Category:Italian_feminine_given_names&#mw-pages",
+     portuguese="https://en.wikipedia.org/w/index.php?title=Category:Portuguese_feminine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    german="https://en.wikipedia.org/w/index.php?title=Category:German_feminine_given_names&#mw-pages", 
+    english="https://en.wikipedia.org/w/index.php?title=Category:English_feminine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    french="https://en.wikipedia.org/w/index.php?title=Category:French_feminine_given_names&pageuntil=Ida+%28given+name%29#mw-pages"), 
+  parseWikiCatalogEn, ex1="previous", ex2="page", nextPageLab="next page", pagePre="https://en.wikipedia.org" )
+maleNamesExt <- lapply(
+  c( 
+    italian="https://en.wikipedia.org/w/index.php?title=Category:Italian_masculine_given_names&#mw-pages",
+    portuguese="https://en.wikipedia.org/w/index.php?title=Category:Portuguese_masculine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    german="https://en.wikipedia.org/w/index.php?title=Category:German_masculine_given_names&#mw-pages", 
+    english="https://en.wikipedia.org/w/index.php?title=Category:English_masculine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    french="https://en.wikipedia.org/w/index.php?title=Category:French_masculine_given_names&pageuntil=Ida+%28given+name%29#mw-pages"), 
+  parseWikiCatalogEn, ex1="previous", ex2="page", nextPageLab="next page", pagePre="https://en.wikipedia.org" )
+
+maleNamesExt <- unlist(maleNamesExt)
+femaleNamesExt <- unlist(femaleNamesExt)
+
+femaleNamesExt <- femaleNamesExt[!femaleNamesExt %in% maleNames]
+maleNamesExt <- maleNamesExt[!maleNamesExt %in% femaleNames]
+maleNames <- c( maleNames, (maleNamesExt) )
+femaleNames <-c( femaleNames, (femaleNamesExt) )
+maleNames <- c( maleNames, 
+                c("VLADIMIR", "JESUS", "CONRAD", "BORIS", "STALIN", "REY", "GENARO", 
+                  "JUSTO", "JUSTINO", "ERIK", "ANGEL", "ALAIN", "HAZAEL", "RAMON", "ALONSO", 
+                  "SERAFIN", "OTONIEL", "ISAURO", "ALAN", "HIBRAIM", "EFREN", "OCTAVIO", "MOISES", 
+                  "FRANCOIS", "JUVENTINO", "ANGEL", "ESTUARDO", "VLADISLAV", "ELVIA", "RUBEN", "FREDY", 
+                  "MARGARITO", "OTHON", "BALTAZAR", "HERNAN", "LEONEL", "PAVEL", "NARCISO", 
+                  "EMMANUEL", "FILIBERTO", "RAMIRO", "ERICK", "RAYMUNDO", "EFRAIN", "ULISES", "RENAN",
+                  "ARCADIO") )
+femaleNames <- c( femaleNames, 
+                  c("GUILLERMINA", "CARMEN", "EVANGELINA", "REYNA", "GUADALUPE", "NOHEMI", 
+                    "MARISELA", "ALEXA", "MARTHA", "FLOR", "KATY", "TERESITA", "SELENA", 
+                    "ARCELIA", "ELVA", "ILIANA", "MINELIA", "LASTENIA", "GINA", "CITLALIT", 
+                    "LIBERTAD", "MARIANELA", "EVERTINA", "LEDA", "SILVANA", "ELIETE", "YLENIA", 
+                    "XOCHITLALLI", "DULCE", "LIBIA", "ADELINA", "JEANNETTE", "SOLEDAD", "MAIRA", 
+                    "MAYRA", "ITZEL", "SOCORRO", "GRACIELA", "IIGA", "ELBA", "CLORINDA", 
+                    "KARLA", "CLAUDETTE", "IDANIA", "NORKA", "AMERICA", "TRILCE", "FABIOLA", 
+                    "OLIVAMA", "ELIA", "NALLELY", "NATTIE", "MATILDE", "YURI", "CELINA", "ESMERALDA", 
+                    "EVELIA", "JAZMIN", "LIGIA", "MANUELA", "NELLY", "ROSALVA", "ARIEL", "CITLALI", "IVETTE", 
+                    "LILIAN", "LUCERO", "MIRNA", "NAYELI", "NIDIA", "ORALIA", "PERLA", "ROSAURA", "ROXANA", "YURI", 
+                    "ZOILA", "FILIBERTO", "ISELA", "REMEDIOS", "LUCILA", "MARISOL", "MINERVA", "YADIRA", "ZOILA", "ALEJANDRINA", 
+                    "EMILIA", "NIEVES", "REGINA", "YAZMIN", "ELVIA", "LIZBETH", "ERENDIRA", "FRANCISCA", 
+                    "REFUGIO", "DANIELA", "MARICELA", "IVONNE", "ANTONIETA", "MIRIAM", "LEONOR", "JOSEFINA", "LILIA") )
+names( maleNames ) <- NULL
+names( femaleNames ) <- NULL
+
+namesCatalog <- rbind(
+  data.frame( gender=rep( "Male", length( maleNames ) ), 
+              name=maleNames, stringsAsFactors=FALSE),
+  data.frame( gender=rep( "Female", length( femaleNames ) ), 
+              name=femaleNames, stringsAsFactors = FALSE ) )
+
+namesCatalog <- namesCatalog %>%
+  dplyr::filter( nchar(name) > 1 ) %>%
+  dplyr::mutate( nameMod=gsub("\\(.*\\).*", "", name ) ) %>%
+  dplyr::mutate( nameMod=gsub(" $", "", nameMod ))
+
+unwanted_array = list('Š'='S', 'š'='s', 'Ž'='Z', 'ž'='z', 'À'='A', 'Á'='A', 'Â'='A', 'Ã'='A', 'Ä'='A', 'Å'='A', 'Æ'='A', 'Ç'='C', 'È'='E', 'É'='E', 'Ê'='E', 'Ë'='E', 'Ì'='I', 'Í'='I', 'Î'='I', 'Ï'='I', 'Ñ'='N', 'Ò'='O', 'Ó'='O', 'Ô'='O', 'Õ'='O', 'Ö'='O', 'Ø'='O', 'Ù'='U', 'Ú'='U', 'Û'='U', 'Ü'='U', 'Ý'='Y', 'Þ'='B', 'ß'='Ss', 'à'='a', 'á'='a', 'â'='a', 'ã'='a', 'ä'='a', 'å'='a', 'æ'='a', 'ā'='a', 'ç'='c', 'è'='e', 'é'='e', 'ê'='e', 'ë'='e', 'ì'='i', 'í'='i', 'ī'='i', 'î'='i', 'ï'='i', 'ł'='l', 'ð'='o', 'ñ'='n', 'ò'='o', 'ó'='o', 'ō'='o', 'ô'='o', 'õ'='o', 'ö'='o', 'ø'='o', 'ś'='s', 'ù'='u', 'ú'='u', 'û'='u', 'ū'='u', 'ý'='y', 'ý'='y', 'þ'='b', 'ÿ'='y', 'ż'='z' )
+
+namesCatalog$nameMod <- chartr( paste(names(unwanted_array), collapse=''),
+         paste(unwanted_array, collapse=''),
+         namesCatalog$nameMod )
+namesCatalog$nameMod <- toupper(namesCatalog$nameMod)
+namesCatalog <- dplyr::rename( namesCatalog, nombre=nameMod )
+namesCatalog <- unique(namesCatalog)
+
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ANGEL" & namesCatalog$gender == "Female"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ELVIA" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "FILIBERTO" & namesCatalog$gender == "Female"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ISIDORO" & namesCatalog$gender == "Female"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ARIEL" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "EVELYN" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ROSARIO" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "AIME" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "SOL" & namesCatalog$gender == "Male"),]
+
+neutralNames <- intersect( 
+  namesCatalog$nombre[namesCatalog$gender == "Male"],
+  namesCatalog$nombre[namesCatalog$gender == "Female"] )
+
+namesCatalog <- namesCatalog[!namesCatalog$nombre %in% neutralNames,]
+```
+
+
+
+```{r}
+library(magrittr)
+
+###perl -pi -e 's/[^[:ascii:]]//g' UNAM_Remuneracion-profesores_2019-09-11_21.41.55.txt 
+payData <- read.delim("UNAM_Remuneracion-profesores_2019-09-11_21.41.55.txt")
+payData <- payData[,vapply( payData, function(x){length(unique(x))}, numeric(1)) > 1]
+payData <- payData %>%
+  dplyr::rename( 
+    unidad_academica=`Unidad.acadmica`, 
+    nombre=`Nombre.completo.del.profesor.a`,
+    apellido_paterno=`Primer.apellido.del.profesor.a`,
+    apellido_materno=`Segundo.apellido.del.profesor.a`,
+    contrato=`Tipo.o.nivel.de.contratacin`,
+    pago_bruto=`Remuneracin.bruta`,
+    pago_neto=`Remuneracin.neta`,
+    estimulos=`Estmulos.correspondientes.a.los.niveles.de.contratacin`,
+    pago_total=`Monto.total.percibido`)
+
+payData <- payData %>%
+  dplyr::mutate_at( 
+    c("pago_bruto", "pago_neto", "pago_total"), 
+    function(x){as.numeric(gsub("\\$|,", "", as.character(x)))})
+payData$id <- sprintf("investigador%0.9d", seq_len(nrow(payData)))
+
+all(round(payData$pago_neto + payData$estimulos) == round( payData$pago_total))
+
+namesDf <- as.data.frame(payData[,c("nombre", "id")])
+namesDf$nombre <- strsplit( as.character(payData$nombre), " " )
+namesDf <- tidyr::unnest(namesDf, cols = c(nombre))
+namesDf <- dplyr::left_join( namesDf, namesCatalog[,c("nombre", "gender")] )
+namesDf <- unique( namesDf )
+namesDf <- namesDf %>% 
+  dplyr::mutate( nameOrder=ave(id, id, FUN=seq_along) )
+
+genderFirstName <- namesDf %>% 
+  dplyr::filter( nameOrder == 1 ) %>%
+  dplyr::select( id, gender )
+
+genderConsensus <- namesDf %>%
+  dplyr::group_by( id, gender ) %>%
+  dplyr::summarize( cnt=dplyr::n() ) %>%
+  na.omit() %>%
+  reshape2::dcast( id ~ gender, value.var="cnt", fun.aggregate = length) %>%
+  dplyr::mutate( 
+    genderConsensus=dplyr::case_when(
+      Male > Female ~ "Male", 
+      Female > Male ~ "Female",
+      (Male == Female & Female > 0) ~ "Ambiguous",
+      is.numeric(Male) ~ "Unknown" )
+  )
+
+genderComplex <- namesCatalog %>%
+  dplyr::filter( grepl( " ", nombre ) ) %>%
+  dplyr::select( nombre, gender ) %>%
+  dplyr::left_join( payData[,c("id", "nombre")]) %>%
+  na.omit() %>%
+  dplyr::select( id, gender ) %>%
+  dplyr::rename( genderComplex=gender )
+
+genderAssignment <- dplyr::full_join( genderConsensus, genderFirstName )
+genderAssignment <- dplyr::full_join( genderAssignment, genderComplex )
+
+genderAssignment$genderFinal <- with( genderAssignment, 
+       ifelse( !is.na(genderComplex), genderComplex, 
+               ifelse( genderConsensus %in% c("Ambiguous", "Other"), 
+                       gender, genderConsensus ) ) )
+
+
+payData <- payData %>% 
+  dplyr::left_join( genderAssignment[,c("id", "genderFinal")] ) %>%
+  dplyr::rename( gender=genderFinal ) %>%
+  dplyr::select( -pago_bruto )
+
+payData$gender[is.na(payData$gender)] <- "Unknown"
+```
+
+```{r}
+
+library(ggplot2)
+library(ggpubr)
+library(cowplot)
+theme_set(theme_cowplot())
+
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  wilcox.test( `pago_total`~gender, data=. )
+
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") )  %>%
+  dplyr::group_by( gender ) %>%
+  dplyr::summarise( tot=mean(pago_total)) %>%
+  tidyr::pivot_wider( names_from=gender, values_from=tot ) %>%
+  dplyr::mutate( diff=Male - Female ) %>%
+  dplyr::pull(diff)
+
+```
+
+```{r}
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  ggplot( aes( pago_total, col=gender ) ) +
+  geom_density() +
+  geom_segment(
+    aes(x = x1, y = y1+.2e-5, xend = x1, yend = y1),
+    data = data.frame(x1=c(70000, 125000), y1=c(1.2e-5, .2e-5) ),
+    inherit.aes=FALSE,
+    arrow = arrow(length = unit(0.03, "npc"))) +
+  labs(y="Density", x="UNAM's monthly salary (MXN)", col="")
+
+# payData %>%
+#   ggplot( aes(`pago_neto`, estimulos) ) +
+#   geom_point()
+# 
+# payData %>%
+#   dplyr::filter( gender %in% c("Male", "Female") ) %>%
+#   ggplot( aes( pago_neto, col=gender ) ) +
+#   geom_density() +
+#   labs(y="Density", x="UNAM's monthly salary (MXN)", col="")
+
+```
+
+
+```{r}
+
+payData %>%
+  dplyr::mutate( contrato=forcats::fct_reorder( contrato, pago_total ) ) %>%
+  ggplot(aes(contrato, pago_total)) +
+  geom_boxplot()
+
+percentageMalesTop50 <- payData %>%
+  dplyr::arrange( desc(pago_total) ) %>%
+  dplyr::select( unidad_academica, nombre, apellido_paterno,  contrato, pago_total, gender ) %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  head(50) %>%
+  dplyr::group_by( gender ) %>%
+  dplyr::summarise( num=dplyr::n() )  %>%
+  dplyr::mutate( percentage=100*(num/sum(num) ) ) %>%
+  dplyr::filter( gender == "Male" ) %>%
+  dplyr::pull(percentage)
+
+```
+
+
+```{r}
+contractSummary <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::summarise( num=dplyr::n(), avePay=mean( pago_total ) ) %>%
+  dplyr::arrange( desc(avePay) )
+
+
+payPerGenderSumm <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  dplyr::group_by( contrato, gender ) %>%
+  dplyr::summarise( num=dplyr::n() ) %>%
+  tidyr::pivot_wider(names_from="gender", values_from="num", values_fill=list(num=0)) %>%
+  dplyr::mutate( femalePercent=100*(Female/(Male+Female) )) %>%
+  dplyr::right_join( contractSummary ) %>%
+  dplyr::ungroup() 
+
+payPerGenderSumm %>%
+  dplyr::filter( num > 5 ) %>%
+  ggplot( aes( avePay/1000, femalePercent) ) +
+  geom_point() +
+  geom_hline(yintercept=50, col="red") +
+  ylim(0, 100)
+
+```
+
+
+```{r}
+
+payPerGenderSumm %>%
+  dplyr::filter( num > 5, femalePercent < 40 ) %>%
+  dplyr::select( contrato, femalePercent, avePay )
+
+```
+
+```{r}
+
+fit <- lm( pago_total ~ contrato+gender,
+          data={
+            dplyr::filter(payData, gender %in% c("Male", "Female") ) %>%
+              dplyr::mutate( gender=factor(gender, levels=c("Male", "Female"))) } )
+
+coefficients(fit)[["genderFemale"]]
+
+broom::tidy(anova(fit)) %>%
+  dplyr::filter( term == "gender" ) %>%
+  dplyr::pull(p.value)
+
+testable <- as.character(payPerGenderSumm %>%
+  dplyr::filter(num > 15) %>%
+  dplyr::pull(contrato))
+  
+
+```
+
+```{r}
+
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>%
+  dplyr::mutate(gender=factor(gender, levels=c("Female", "Male"))) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::group_map( ~ cbind( 
+    broom::tidy( t.test( pago_total ~ gender, data=.x )),
+    contrato=unique( .x$contrato ) ), keep=TRUE ) %>%
+  dplyr::bind_rows() %>%
+  dplyr::select( estimate, conf.low, conf.high, contrato, p.value ) %>%
+  dplyr::mutate( q.value = p.adjust( p.value, method="BH")) %>%
+  dplyr::filter( q.value < 0.5 )
+
+payData %>%
+  dplyr::filter( 
+    contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO", 
+    gender %in% c("Male", "Female") ) %>%
+  ggplot( aes(estimulos, col=gender ) ) +
+  geom_density()
+
+```
+
+```{r echo=FALSE}
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>%
+  dplyr::mutate(gender=factor(gender, levels=c("Female", "Male"))) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::group_map( ~ cbind( 
+    broom::tidy(t.test( pago_total ~ gender, data=.x )),
+    contrato=unique( .x$contrato ) ), keep=TRUE ) %>%
+  dplyr::bind_rows() %>%
+  dplyr::select( estimate, conf.low, conf.high, contrato, p.value ) %>%
+  dplyr::mutate( q.value = p.adjust( p.value, method="BH")) %>%
+  dplyr::left_join( payPerGenderSumm ) %>%
+  ggplot( aes( femalePercent, estimate ) ) +
+  geom_point() +
+  geom_hline(yintercept=0) +
+  geom_vline(xintercept=50)
+```
+
+```{r}
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>%
+  dplyr::mutate(gender=factor(gender, levels=c("Female", "Male"))) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::group_map( ~ cbind( 
+    broom::tidy(t.test( pago_total ~ gender, data=.x )),
+    contrato=unique( .x$contrato ) ), keep=TRUE ) %>%
+  dplyr::bind_rows() %>%
+  dplyr::select( estimate, conf.low, conf.high, contrato, p.value ) %>%
+  dplyr::mutate( q.value = p.adjust( p.value, method="BH")) %>%
+  dplyr::left_join( payPerGenderSumm ) %>%
+  ggplot( aes( avePay/1000, estimate/1000 ) ) +
+#  geom_errorbar(aes(ymin=conf.low/1000, ymax=conf.high/1000), width=.1) +
+  geom_point() + 
+  geom_hline(yintercept=0, col="darkred", alpha=0.8) 
+
+```
