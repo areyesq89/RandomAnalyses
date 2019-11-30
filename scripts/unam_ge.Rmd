@@ -381,7 +381,7 @@ $$y_{i} = \beta_{0} + \beta_{1}^{female}x_{1i} + \sum_{j=2}^{q} {{\beta}_{j}^{co
 
 where $y_{i}$ is the salary of individual $i$ and $q$ is the number of possible contracts. $\beta_{0}$ is the intercept term, which estimates the mean salary for males that have an arbitrary base level contract. $x_{1i}$ is a dummy variable that $x_{1i}=1$ if individual $i$ is a female and that $x_{1i}=0$ if individual $i$ is a male. $x_{ji}$ are dummmy variables that $x_{ji}=1$ if individual $i$ has a contract $j$ and $x_{ji}=0$ otherwise. $\epsilon_{i}$ is the error term that is normally distributed.
 
-The coefficient of interest in the model is $\beta_{1}^{female}$, which estimates the difference in salary that females receive compare to males after adjusting for the contract types, which are estimated by the ${\beta}_{j}^{contract}$ coefficients. 
+The coefficient of interest in the model is $\beta_{1}^{female}$, which estimates the difference in salary that females receive compare to males after adjusting for salary differences between different contracts, which are estimated by the ${\beta}_{j}^{contract}$ coefficients. 
 
 ```{r}
 
@@ -414,9 +414,9 @@ pvalLm
 
 ```
 
-The $p$-value of an analysis of variance indicates that there is a significant difference in the salaries that females earn compare to males that are employed with the same contracts **But contrary to what I was expecting, the resulting  $\beta_{1}^{female}$ coefficient indicates that females actually earn `r round(coefFemale)` MXN more than males.** I found this result to be counterintuitive, given that historically (due to unfairness and discrimination) males typically more than females.
+The $p$-value of an analysis of variance indicates that there is a significant difference in the salaries that females earn compare to males that are employed with the same contracts. **But contrary to what I was expecting, the resulting  $\beta_{1}^{female}$ coefficient indicates that females actually earn `r round(coefFemale)` MXN more than males.** I found this result to be counterintuitive, given that historically (due to unfairness and discrimination) males typically earn more than females.
 
-To further understand the source of this wage differences, I explored the difference in pay gaps in each contract. I tested for each contract whether there are differences in salaries between genders
+To further understand the source of this wage differences, I explored the difference in pay gaps in each contract. I tested for each contract whether there are differences in salaries between genders.
 
 ```{r, fig.height=3, fig.width=6}
 
@@ -470,7 +470,7 @@ payData %>%
   scale_colour_manual(values=c(Female="#e41a1c", Male="#377eb8"))
 ```
 
-In these two positions, *Investigador Titular B* and *Profesor Titular C*, the average of females is `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% and `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% more than the average of males, respectively. Although significant, these differences are minimal.
+In these two positions, *Investigador Titular B* and *Profesor Titular C*, the average of females is `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% and `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% higher than the average of males, respectively. 
 
 The plot below shows the differences between the salaries of females compared to males ($y$-axis) for each contract (each dot) plotted as a function of the average salary of the contract ($x$-axis). The points are coloured according to the percentage of females in that contract and I'm drawing the 95% confidence intervals of the mean differences. Dots above the horizontal dotted line indicate that the average in salaries is higher in females than in males, and dots below the horizontal dotted line indicate that the average salary for females is lower compare to those of males. 
 
@@ -518,5 +518,14 @@ numAboveZero <- payData %>%
 
 ```
 
-For `r round(100*sum(numAboveZero$estimate > 0)/nrow(numAboveZero))`% of the contracts (`r sum(numAboveZero$estimate > 0)` out of `r nrow(numAboveZero)`), the average was higher for females than for males (i.e. the dots are above the horizontal dotted line). This explains why the $\beta_{1}^{female}$ coefficient was significant in the linear model. However, the 95% confidence intervals overlap with the zero line for `r sum(Vectorize(dplyr::between)(0, numAboveZero$conf.low, numAboveZero$conf.high))` of the contracts, which is why only the remaining `r sum(!Vectorize(dplyr::between)(0, numAboveZero$conf.low, numAboveZero$conf.high))` contracts, *Investigador Titular B* and *Profesor Titular C*, are significant in the contract-wise tests.
+For `r round(100*sum(numAboveZero$estimate > 0)/nrow(numAboveZero))`% of the contracts (`r sum(numAboveZero$estimate > 0)` out of `r nrow(numAboveZero)`), the average was higher for females than for males (i.e. the dots are above the horizontal dotted line). This explains why the $\beta_{1}^{female}$ coefficient is significant in the linear model. However, the 95% confidence intervals overlap with the zero line for `r sum(Vectorize(dplyr::between)(0, numAboveZero$conf.low, numAboveZero$conf.high))` of the contracts, which is why only the remaining `r sum(!Vectorize(dplyr::between)(0, numAboveZero$conf.low, numAboveZero$conf.high))` contracts, *Investigador Titular B* and *Profesor Titular C*, are significant in the contract-wise tests. 
 
+# Conclusions
+
+**My analysis shows that among UNAM's faculty members, males earns `r round(100*meanDiff/mean(payData$pago_total[payData$gender=="Male"]))`% more than female faculty on average. This wage gap difference is explained by the high rank academic titles being strongly dominated by males.** For example, only 15% of UNAM's highest academic titles, *Investigadores Emeritos*, are females. 
+
+When I tested for differences in wages between males and females with the same contracts, it turns out that **females earn on average `r round(100*coefFemale/mean(payData %>% dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>% dplyr::pull(pago_total)))`% more than males with the same contracts**. This difference is more evident in two contracts, *Investigador Titular B* and *Profesor Titular C*,  where females earn `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% and `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% more than males, respectively. 
+
+**In the most positions where the percentage of males is large, which tend to be senior positions, the few women in those contracts tend to earn more than man**. This is very intriguing and I don't have a clear explanation for it. One possible scenario is that man are promoted more often than women. In such scenario female researchers would remain with lower rank positions for more time and would accumulate more salary increases. 
+
+The solution is obvious: **in order to reach gender equality, UNAM should promote more women to the higher rank academic titles**. 
