@@ -28,7 +28,7 @@ knitr::opts_chunk$set( echo = TRUE, warnings=FALSE, message = FALSE, cache=TRUE 
 
 As mentioned earlier, all UNAM's wage data is [publicly available](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). I downloaded these data and saved them as tab-separated file. I also did some additional data wrangling to remove non-ASCII characters and have nicer column names. 
 
-```{r}
+```{r cache=FALSE}
 library(magrittr)
 
 ###perl -pi -e 's/[^[:ascii:]]//g' UNAM_Remuneracion-profesores_2019-09-11_21.41.55.txt 
@@ -57,7 +57,7 @@ payData$academic_title <- gsub( "^\\S+ (.*)$", "\\1", payData$academic_title )
 
 ```
 
-These data contains information for `r nrow(payData)` researchers, including full names, monthly salaries, academic ranks and academic departments.
+These data contain information for `r nrow(payData)` researchers, including full names, monthly salaries, academic ranks and academic departments.
 
 ## Creating catalogs of names per gender
 
@@ -145,7 +145,7 @@ femaleNames <-c( femaleNames, (femaleNamesExt) )
 
 ```
 
-Since I noticed that Wikipedia catalogs were missing many names that are common in Mexico, I added manually all names that appeared at least 5 times in the list of UNAM's professors. 
+I noticed that Wikipedia catalogs were missing many names that are common in Mexico, so I added manually all missing names that appeared at least 5 times in the list of UNAM's professors. 
 
 ```{r}
 
@@ -276,7 +276,7 @@ payData <- payData %>%
 payData$gender[is.na(payData$gender)] <- "Unknown"
 ```
 
-Based on these strategies, I could assign a gender to `r sum(payData$gender %in% c("Male", "Female"))` faculty members, which corresponds to `r round(100*(sum(payData$gender %in% c("Male", "Female"))/nrow(payData)))`% of UNAM's academics. Of the people that I could assign a gender, `r sum(payData$gender %in% "Female")` (`r round(100*sum(payData$gender %in% "Female")/sum(payData$gender %in% c("Male", "Female")))`%) were females. This percentage of females estimate is consistent with [UNAM's reports](https://www.gaceta.unam.mx/vive-la-unam-proceso-de-avance-en-igualdad-de-genero/).
+Based on these strategies, I could assign a gender to `r sum(payData$gender %in% c("Male", "Female"))` faculty members, which corresponds to `r round(100*(sum(payData$gender %in% c("Male", "Female"))/nrow(payData)))`% of UNAM's academics. Of the people that I could assign a gender, `r sum(payData$gender %in% "Female")` (`r round(100*sum(payData$gender %in% "Female")/sum(payData$gender %in% c("Male", "Female")))`%) were females. This estimate of the percentage of female faculty is consistent with [UNAM's reports](https://www.gaceta.unam.mx/vive-la-unam-proceso-de-avance-en-igualdad-de-genero/).
 
 # High-rank positions are dominated by males
 
@@ -303,7 +303,10 @@ meanDiff <- payData %>%
 
 **I found a significant difference between the wages earned by females and males ($`r paste0("p = ", gsub("e", " * 10^{", format( pval$p.value, digits=2)), "}")`$). On average, males earn `r round(meanDiff)` MXN more than females.** The plot below shows the distribution of wages for each gender. 
 
-```{r}
+```{r, fig.height=3, fig.width=6}
+library(cowplot)
+theme_set(theme_cowplot())
+
 payData %>%
   dplyr::filter( gender %in% c("Male", "Female") ) %>%
   ggplot( aes( pago_total, col=gender ) ) +
@@ -322,6 +325,8 @@ These distributions show several modes, and there are two peaks towards the high
 Su I asked whether higher academic titles are dominated by males. To do so, I plotted the percentage of females in each academic title as a function of the average salary in that title. 
 
 ```{r, fig.height=3, fig.width=4}
+library(cowplot)
+theme_set(theme_cowplot())
 
 contractSummary <- payData %>%
   dplyr::filter( gender %in% c("Male", "Female") ) %>%
@@ -344,7 +349,7 @@ payPerGenderSumm %>%
   geom_point() +
   geom_hline(yintercept=50, col="red") +
   ylim(0, 100) +
-  labs(x="Monthly salary (x 1,000 MXN)", y="Percentage of females")
+  labs(x="Monthly salary (x 1,000 MXN)", y="Percentage of women")
 
 ```
 
@@ -455,7 +460,9 @@ nrow(differentPays)
 
 **Two full-time contracts were significant at a false discovery rate of 10%.** The plot below shows the distributions of wages for these two contracts in each gender.
 
-```{r, fig.width=5, fig.height=2.8}
+```{r, fig.width=5.5, fig.height=2.8}
+library(cowplot)
+theme_set(theme_cowplot())
 payData %>%
   dplyr::filter( 
     contrato == dplyr::pull(differentPays, contrato), 
@@ -475,6 +482,8 @@ In these two positions, *Investigador Titular B* and *Profesor Titular C*, the a
 The plot below shows the differences between the salaries of females compared to males ($y$-axis) for each contract (each dot) plotted as a function of the average salary of the contract ($x$-axis). The points are coloured according to the percentage of females in that contract and I'm drawing the 95% confidence intervals of the mean differences. Dots above the horizontal dotted line indicate that the average in salaries is higher in females than in males, and dots below the horizontal dotted line indicate that the average salary for females is lower compare to those of males. 
 
 ```{r, fig.height=3.2, fig.width=5.9}
+library(cowplot)
+theme_set(theme_cowplot())
 
 cols <- c( colorRampPalette( c("#b2182b", "#f4a582", "#bababa"), bias=0.5)(100),
    rev(colorRampPalette( c( "#2166ac", "#92c5de", "#bababa"), bias=0.5)(100) ) )
@@ -495,12 +504,12 @@ payData %>%
   geom_point() + 
   scale_colour_gradientn(colours=cols,  limits=c(0, 100)) +
   geom_hline(yintercept=0, col="black", alpha=0.95, linetype="longdash") +
-  annotate("text", x=27, y=6.5, label="↑ Females earn more", color = "black") +
-  annotate("text", x=27, y=-6.5, label="↓ Males earn more  ", color = "black") +
+  annotate("text", x=27, y=6.5, label="   ↑ Women earn more", color = "black") +
+  annotate("text", x=27, y=-6.5, label=" ↓ Men earn more  ", color = "black") +
   ylim(-6.5, 15) +
   labs(x="Average salary (1,000 MXN)", 
-       y="Difference in means of salaries\n(Female-Male)",
-       col="% of females")
+       y="Difference in means of salaries\n( Women - Men )",
+       col="% of women")
 
 ```
 
@@ -524,8 +533,16 @@ For `r round(100*sum(numAboveZero$estimate > 0)/nrow(numAboveZero))`% of the con
 
 **My analysis shows that among UNAM's faculty members, males earns `r round(100*meanDiff/mean(payData$pago_total[payData$gender=="Male"]))`% more than female faculty on average. This wage gap difference is explained by the high rank academic titles being strongly dominated by males.** For example, only 15% of UNAM's highest academic titles, *Investigadores Emeritos*, are females. 
 
-When I tested for differences in wages between males and females with the same contracts, it turns out that **females earn on average `r round(100*coefFemale/mean(payData %>% dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>% dplyr::pull(pago_total)))`% more than males with the same contracts**. This difference is more evident in two contracts, *Investigador Titular B* and *Profesor Titular C*,  where females earn `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% and `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% more than males, respectively. 
+When I tested for differences in wages between males and females with the same contracts, it turns out that **females earn on average `r round(100*coefFemale/mean(payData %>% dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>% dplyr::pull(pago_total)))`% more than males with the same contracts**. This difference is more evident in two contracts, *Investigador Titular B* and *Profesor Titular C*,  where females earn `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% and `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% more than males, respectively. However, these differences in wages are minimal.
 
-**In the most positions where the percentage of males is large, which tend to be senior positions, the few women in those contracts tend to earn more than man**. This is very intriguing and I don't have a clear explanation for it. One possible scenario is that man are promoted more often than women. In such scenario female researchers would remain with lower rank positions for more time and would accumulate more salary increases. 
+**In the contracts where the percentage of man is large, which tend to be senior positions, the few women in those contracts tend to earn more than man**. This is very intriguing and I don't have a clear explanation for it. One possible scenario is that man are promoted more often than women. In such scenario female researchers would remain with lower rank positions for more time and thus would accumulate more salary increases. 
 
-The solution is obvious: **in order to reach gender equality, UNAM should promote more women to the higher rank academic titles**. 
+The biggest problem, however, is the lack of representation of female faculty in senior positions: **in order to reach gender equality, UNAM should promote more women to the highest rank academic titles**. 
+
+# Session Information
+
+```{r}
+sessionInfo()
+```
+
+# References
