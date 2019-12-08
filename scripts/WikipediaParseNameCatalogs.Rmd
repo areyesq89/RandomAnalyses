@@ -1,0 +1,173 @@
+---
+title: "WikipediaParseNameCatalogs"
+author: "Alejandro Reyes"
+date: "12/8/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Creating catalogs of masculine and feminine names
+
+I generated a catalog of typically masculine and feminine names. Since Wikipedia has catalogs of masculine names and feminine names in several languages, I wrote a function to scrape these data. I ran this function for the Wikipedia pages of masculine and feminine names in Spanish, English, Italian, Portughese, French and German.
+
+```{r}
+library(rvest)
+
+
+parseWikiCatalogEn <- function( wikiPage, ex1="página", ex2="anterior", nextPageLab="página siguiente", pagePre="https://es.wikipedia.org"){
+  mascNames <- c()
+  keepFlag <- 1
+  while( keepFlag > 0 ){
+    pageNames <- wikiPage %>% 
+      read_html %>% 
+      html_node('body #content #bodyContent #mw-content-text #mw-pages') %>% 
+      html_text
+    if( grepl("previous|anterior", pageNames) ){
+      pageNames <- strsplit( pageNames, sprintf("\\(%s|%s\\)", ex1, ex2))[[1]][4]
+    }else{
+      pageNames <- strsplit(pageNames, "more\\)\\.\n")[[1]][2]
+    } ### fix
+    pageNames <- strsplit( pageNames, "\n" )[[1]]
+    pageNames <- gsub("[A-Z]{1}$", "", pageNames)
+    pageNames <- gsub("siguiente\\)", "", pageNames)
+    mascNames <- c(mascNames, pageNames)
+    Sys.sleep(2)
+    posNodes <- wikiPage %>% 
+      read_html %>% 
+      html_nodes('body #content #bodyContent #mw-content-text #mw-pages > a')
+    posText <- posNodes %>% html_text
+    posUrl <- posNodes %>% html_attr("href")
+    nextLink <- which(posText == nextPageLab )
+    if( length(nextLink) > 0 ){
+      keepFlag <- 1
+      }else{
+      keepFlag <- 0
+      }
+    wikiPage <- unique(posUrl[nextLink])
+    wikiPage <- paste0( pagePre, wikiPage )
+    Sys.sleep(2)
+  }
+  mascNames <- mascNames[!(mascNames == " "|mascNames == "")]
+  mascNames
+}
+
+maleWikiLink <- 
+  "https://es.wikipedia.org/w/index.php?title=Categor%C3%ADa:Nombres_masculinos&pageuntil=Columbano+%28nombre%29#mw-pages"
+femaleWikiLink <- 
+  "https://es.wikipedia.org/w/index.php?title=Categor%C3%ADa:Nombres_femeninos&pageuntil=Idoya#mw-pages"
+maleNames <- parseWikiCatalogEn( maleWikiLink )
+femaleNames <- parseWikiCatalogEn( femaleWikiLink )
+femaleNamesExt <- lapply(
+  c( italian=
+       "https://en.wikipedia.org/w/index.php?title=Category:Italian_feminine_given_names&#mw-pages",
+     portuguese=
+       "https://en.wikipedia.org/w/index.php?title=Category:Portuguese_feminine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    german=
+      "https://en.wikipedia.org/w/index.php?title=Category:German_feminine_given_names&#mw-pages", 
+    english=
+      "https://en.wikipedia.org/w/index.php?title=Category:English_feminine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    french=
+      "https://en.wikipedia.org/w/index.php?title=Category:French_feminine_given_names&pageuntil=Ida+%28given+name%29#mw-pages"), 
+  parseWikiCatalogEn, ex1="previous", ex2="page", nextPageLab="next page", pagePre="https://en.wikipedia.org" )
+maleNamesExt <- lapply(
+  c( 
+    italian=
+      "https://en.wikipedia.org/w/index.php?title=Category:Italian_masculine_given_names&#mw-pages",
+    portuguese=
+      "https://en.wikipedia.org/w/index.php?title=Category:Portuguese_masculine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    german=
+      "https://en.wikipedia.org/w/index.php?title=Category:German_masculine_given_names&#mw-pages", 
+    english=
+      "https://en.wikipedia.org/w/index.php?title=Category:English_masculine_given_names&pageuntil=Ida+%28given+name%29#mw-pages",
+    french=
+      "https://en.wikipedia.org/w/index.php?title=Category:French_masculine_given_names&pageuntil=Ida+%28given+name%29#mw-pages"), 
+  parseWikiCatalogEn, ex1="previous", ex2="page", nextPageLab="next page", pagePre="https://en.wikipedia.org" )
+
+maleNamesExt <- unlist(maleNamesExt)
+femaleNamesExt <- unlist(femaleNamesExt)
+femaleNamesExt <- femaleNamesExt[!femaleNamesExt %in% maleNames]
+maleNamesExt <- maleNamesExt[!maleNamesExt %in% femaleNames]
+maleNames <- c( maleNames, (maleNamesExt) )
+femaleNames <-c( femaleNames, (femaleNamesExt) )
+
+```
+
+I noticed that Wikipedia catalogs were missing many names that are common in Mexico, so I added manually all missing names that appeared at least 5 times in the list of UNAM's professors. 
+
+```{r}
+
+maleNames <- c( maleNames, 
+                c("VLADIMIR", "JESUS", "CONRAD", "BORIS", "STALIN", "REY", "GENARO", 
+                  "JUSTO", "JUSTINO", "ERIK", "ANGEL", "ALAIN", "HAZAEL", "RAMON", "ALONSO", 
+                  "SERAFIN", "OTONIEL", "ISAURO", "ALAN", "HIBRAIM", "EFREN", "OCTAVIO", 
+                  "MOISES", "FRANCOIS", "JUVENTINO", "ANGEL", "ESTUARDO", "VLADISLAV", 
+                  "ELVIA", "RUBEN", "FREDY", "MARGARITO", "OTHON", "BALTAZAR", "HERNAN", 
+                  "LEONEL", "PAVEL", "NARCISO", "EMMANUEL", "FILIBERTO", "RAMIRO", 
+                  "ERICK", "RAYMUNDO", "EFRAIN", "ULISES", "RENAN", "ARCADIO") )
+femaleNames <- c( femaleNames, 
+                  c("GUILLERMINA", "CARMEN", "EVANGELINA", "REYNA", "GUADALUPE", "NOHEMI", 
+                    "MARISELA", "ALEXA", "MARTHA", "FLOR", "KATY", "TERESITA", "SELENA", 
+                    "ARCELIA", "ELVA", "ILIANA", "MINELIA", "LASTENIA", "GINA", 
+                    "CITLALIT", "LIBERTAD", "MARIANELA", "EVERTINA", "LEDA", "SILVANA", 
+                    "ELIETE", "YLENIA", "XOCHITLALLI", "DULCE", "LIBIA", "ADELINA", 
+                    "JEANNETTE", "SOLEDAD", "MAIRA", "MAYRA", "ITZEL", "SOCORRO", 
+                    "GRACIELA", "IIGA", "ELBA", "CLORINDA", "KARLA", "CLAUDETTE", "IDANIA", 
+                    "NORKA", "AMERICA", "TRILCE", "FABIOLA", "OLIVAMA", "ELIA", "NALLELY", 
+                    "NATTIE", "MATILDE", "YURI", "CELINA", "ESMERALDA", "EVELIA", "JAZMIN", 
+                    "LIGIA", "MANUELA", "NELLY", "ROSALVA", "ARIEL", "CITLALI", "IVETTE", 
+                    "LILIAN", "LUCERO", "MIRNA", "NAYELI", "NIDIA", "ORALIA", "PERLA", 
+                    "ROSAURA", "ROXANA", "YURI", "ZOILA", "FILIBERTO", "ISELA", "REMEDIOS", 
+                    "LUCILA", "MARISOL", "MINERVA", "YADIRA", "ZOILA", "ALEJANDRINA", 
+                    "EMILIA", "NIEVES", "REGINA", "YAZMIN", "ELVIA", "LIZBETH", "ERENDIRA", 
+                    "FRANCISCA", "REFUGIO", "DANIELA", "MARICELA", "IVONNE", "ANTONIETA", 
+                    "MIRIAM", "LEONOR", "JOSEFINA", "LILIA") )
+names( maleNames ) <- NULL
+names( femaleNames ) <- NULL
+
+namesCatalog <- rbind(
+  data.frame( gender=rep( "Male", length( maleNames ) ), 
+              name=maleNames, stringsAsFactors=FALSE),
+  data.frame( gender=rep( "Female", length( femaleNames ) ), 
+              name=femaleNames, stringsAsFactors = FALSE ) )
+
+namesCatalog <- namesCatalog %>%
+  dplyr::filter( nchar(name) > 1 ) %>%
+  dplyr::mutate( nameMod=gsub("\\(.*\\).*", "", name ) ) %>%
+  dplyr::mutate( nameMod=gsub(" $", "", nameMod ))
+
+unwanted_array = list('Š'='S', 'š'='s', 'Ž'='Z', 'ž'='z', 'À'='A', 'Á'='A', 'Â'='A', 'Ã'='A', 'Ä'='A', 'Å'='A', 'Æ'='A', 'Ç'='C', 'È'='E', 'É'='E', 'Ê'='E', 'Ë'='E', 'Ì'='I', 'Í'='I', 'Î'='I', 'Ï'='I', 'Ñ'='N', 'Ò'='O', 'Ó'='O', 'Ô'='O', 'Õ'='O', 'Ö'='O', 'Ø'='O', 'Ù'='U', 'Ú'='U', 'Û'='U', 'Ü'='U', 'Ý'='Y', 'Þ'='B', 'ß'='Ss', 'à'='a', 'á'='a', 'â'='a', 'ã'='a', 'ä'='a', 'å'='a', 'æ'='a', 'ā'='a', 'ç'='c', 'è'='e', 'é'='e', 'ê'='e', 'ë'='e', 'ì'='i', 'í'='i', 'ī'='i', 'î'='i', 'ï'='i', 'ł'='l', 'ð'='o', 'ñ'='n', 'ò'='o', 'ó'='o', 'ō'='o', 'ô'='o', 'õ'='o', 'ö'='o', 'ø'='o', 'ś'='s', 'ù'='u', 'ú'='u', 'û'='u', 'ū'='u', 'ý'='y', 'ý'='y', 'þ'='b', 'ÿ'='y', 'ż'='z' )
+
+namesCatalog$nameMod <- chartr( paste(names(unwanted_array), collapse=''),
+         paste(unwanted_array, collapse=''),
+         namesCatalog$nameMod )
+namesCatalog$nameMod <- toupper(namesCatalog$nameMod)
+namesCatalog <- dplyr::rename( namesCatalog, nombre=nameMod )
+namesCatalog <- unique(namesCatalog)
+```
+
+I discarded most names that are given to both males and females. But for some of these ambiguous cases, I assigned a gender based on the gender that is more common in Mexico for that name. For example, the name "Angel" is listed in Wikipedia as a name for both females and males, but it is more common for males in Mexico. 
+
+```{r}
+
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ANGEL" & namesCatalog$gender == "Female"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ELVIA" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "FILIBERTO" & namesCatalog$gender == "Female"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ISIDORO" & namesCatalog$gender == "Female"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ARIEL" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "EVELYN" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "ROSARIO" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "AIME" & namesCatalog$gender == "Male"),]
+namesCatalog <- namesCatalog[!(namesCatalog$nombre == "SOL" & namesCatalog$gender == "Male"),]
+
+neutralNames <- intersect( 
+  namesCatalog$nombre[namesCatalog$gender == "Male"],
+  namesCatalog$nombre[namesCatalog$gender == "Female"] )
+
+namesCatalog <- namesCatalog[!namesCatalog$nombre %in% neutralNames,]
+```
+
+I collected `r format( sum(namesCatalog$gender == "Male"), big.mark=",")` male names and `r format(sum(namesCatalog$gender == "Female"), big.mark=",")` female names. 
+
