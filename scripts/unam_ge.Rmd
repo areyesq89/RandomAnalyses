@@ -1,5 +1,5 @@
 ---
-title: "Gender equality in UNAM's academic salaries"
+title: "Gender pay gap in UNAM's faculty in the year 2019"
 author: "Alejandro Reyes"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
@@ -24,7 +24,7 @@ knitr::opts_chunk$set( echo = TRUE, warnings=FALSE, message = FALSE, cache=TRUE 
 
 # UNAM's wages data
 
-All UNAM's wage data is [publicly available](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). I downloaded these data and saved them as tab-separated file. I did some additional data wrangling to remove non-ASCII characters and have nicer column names. 
+All UNAM's wage data is [publicly available](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). I downloaded the data corresponding to the year 2019 and saved them as tab-separated file. I did some additional data wrangling to remove non-ASCII characters and have nicer column names. 
 
 ```{r cache=FALSE}
 library(magrittr)

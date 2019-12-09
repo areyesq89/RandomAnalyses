@@ -1,5 +1,5 @@
 ---
-title: "La brecha salarial de género del profesorado de la UNAM"
+title: "La brecha salarial de género del profesorado de la UNAM en el año 2019"
 author: "Alejandro Reyes"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
@@ -24,7 +24,7 @@ knitr::opts_chunk$set( echo = TRUE, warnings=FALSE, message = FALSE, cache=TRUE 
 
 # Datos salariales de la UNAM
 
-Todos los datos salariales de la UNAM están [disponibles al público](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). Descargué estos datos y los guardé como un archivo separado por tabuladores. Hice algunos cambios al archivo para eliminar caracteres que no son ASCII y para renombrar las columnas con nombres más bonitos.
+Todos los datos salariales de la UNAM están [disponibles al público](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). Descargué los datos correspondientes al año 2019 y los guardé como un archivo de valores separados por tabuladores. Hice algunos cambios al archivo para eliminar caracteres que no eran ASCII y para renombrar las columnas con nombres más bonitos.
 
 ```{r cache=FALSE}
 library(magrittr)
