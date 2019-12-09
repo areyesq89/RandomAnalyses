@@ -1,5 +1,5 @@
 ---
-title: "Gender pay gap in UNAM's faculty in the year 2019"
+title: "The gender pay gap of UNAM's faculty in the year 2019"
 author: "Alejandro Reyes"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:

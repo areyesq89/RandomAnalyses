@@ -1,5 +1,5 @@
 ---
-title: "La brecha salarial de género del profesorado de la UNAM en el año 2019"
+title: "La brecha salarial de género del profesorado de la UNAM en el 2019"
 author: "Alejandro Reyes"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
