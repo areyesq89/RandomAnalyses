@@ -1,0 +1,394 @@
+---
+title: "La brecha salarial de género del profesorado de la UNAM"
+author: "Alejandro Reyes"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: no
+    toc_depth: 2
+    toc_float: yes
+---
+
+La brecha salarial de género es la diferencia promedio de ingresos entre hombres y mujeres. Según la Organización para la Cooperación y el Desarrollo Económico, la brecha salarial de género fue del 13.5% a nivel mundial y del 14% en México en el año 2018 [^1]. Las razones detrás de la brecha salarial incluyen la discriminación, la segregación ocupacional y los roles de género establecidos por la sociedad. Estudios de investigación han estimado que las brechas salariales de género no desaparecerán antes del año 2109 [^2].
+
+La Universidad Nacional Autónoma de México (UNAM) es una de las universidades más grandes de América Latina. Más de 10,000 investigadores trabajan en laboratorios de la UNAM. Dado que la UNAM está financiada con gasto público, la Universidad esta obligada a divulgar la información sobre contratos y salarios de trabajadores de cada facultad. Estos datos están disponibles en el [sitio web de transparencia de la UNAM](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores).
+
+Este blog describe un análisis que aborda la pregunta: **¿Existe una brecha salarial entre hombres y mujeres que trabajan en puestos académicos de la UNAM?** El código para reproducir este análisis se encuentra en [mi cuenta de Github](https://github. com/areyesq89/RandomAnalyses/blob/master/scripts/unam_ge.Rmd).
+
+[^1]: https://data.oecd.org/earnwage/gender-wage-gap.htm
+[^2]: https://www.theguardian.com/society/2011/aug/31/cmi-equal-pay-report
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set( echo = TRUE, warnings=FALSE, message = FALSE, cache=TRUE )
+```
+
+# Datos salariales de la UNAM
+
+Todos los datos salariales de la UNAM están [disponibles al público](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). Descargué estos datos y los guardé como un archivo separado por tabuladores. Hice algunos cambios al archivo para eliminar caracteres que no son ASCII y para renombrar las columnas con nombres más bonitos.
+
+```{r cache=FALSE}
+library(magrittr)
+
+###perl -pi -e 's/[^[:ascii:]]//g' UNAM_Remuneracion-profesores_2019-09-11_21.41.55.txt 
+payData <- read.delim("UNAM_Remuneracion-profesores_2019-09-11_21.41.55.txt")
+payData <- payData[,vapply( payData, function(x){length(unique(x))}, numeric(1)) > 1]
+payData <- payData %>%
+  dplyr::rename( 
+    unidad_academica=`Unidad.acadmica`, 
+    nombre=`Nombre.completo.del.profesor.a`,
+    apellido_paterno=`Primer.apellido.del.profesor.a`,
+    apellido_materno=`Segundo.apellido.del.profesor.a`,
+    contrato=`Tipo.o.nivel.de.contratacin`,
+    pago_bruto=`Remuneracin.bruta`,
+    pago_neto=`Remuneracin.neta`,
+    estimulos=`Estmulos.correspondientes.a.los.niveles.de.contratacin`,
+    pago_total=`Monto.total.percibido`)
+
+payData <- payData %>%
+  dplyr::mutate_at( 
+    c("pago_bruto", "pago_neto", "pago_total"), 
+    function(x){as.numeric(gsub("\\$|,", "", as.character(x)))})
+payData$id <- sprintf("investigador%0.9d", seq_len(nrow(payData)))
+
+payData$academic_title <- payData$contrato
+payData$academic_title <- gsub( "^\\S+ (.*)$", "\\1", payData$academic_title )
+
+```
+
+Estos datos incluyen nombres completos, salario mensual, rango académico y facultad de `r format( nrow(payData), big.mark= ",")` profesores e investigadores.
+
+# El 45% del profesorado de la UNAM está constituido por mujeres
+
+Luego, intenté asignar una identidad de género a cada miembro del profesorado con base en sus nombre de pila. En mi primer intento, hice catálogos de nombres masculinos y femeninos bajando programáticamente datos de Wikipedia (el código para eso se puede encontrar [aquí](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/WikipediaParseNameCatalogs.Rmd)). Después me hicieron notar un paquete de R llamado [*gender*](https://cran.r-project.org/web/packages/gender/index.html), que utiliza datos de seguridad social y de censos de Estados Unidos para asignar una identidad de género a cada nombre. Al final, utilicé el paquete *gender* por ser una estrategia superior y más limpia que mis catálogos de nombres.
+
+En México, es común que las personas tengan más de un nombre de pila, y nombres como "María José" pueden ser complicados, ya que "María" es un nombre femenino, "José" es un nombre masculino y la combinación de ambos "María José", es un nombre dado a mujeres. En estos casos, consideré tanto la identidad de género del primer nombre de pila así como el la identidad de género consenso de los diferentes nombres de pila. En general, estas dos estrategias dieron resultados casi idénticos. Para los investigadores con un solo nombre de pila, la asignación fue sencilla. Para los investigadores con más de un nombre, asigné una identidad de género ya sea usando el primer nombre de pila o el consenso de los nombres individuales en los casos en el que el primer nombre de pila no fue informativo. **Una consideración importante es que la identidad de género asignada por mi análisis toma los valores de "hombre" y "mujer" y como resultado, no pude incluir a las personas que experimentan su identidad de género fuera de estas dos categorías.**
+
+```{r}
+
+namesDf <- as.data.frame(payData[,c("nombre", "id")])
+namesDf$nombre <- strsplit( as.character(payData$nombre), " " )
+namesDf <- tidyr::unnest(namesDf, cols = c(nombre))
+namesDf <- namesDf %>% 
+  dplyr::mutate( nameOrder=ave(id, id, FUN=seq_along) )
+
+library(gender)
+gendersPackage <- gender( unique(namesDf$nombre), 2012 )[,c("name", "gender")]
+
+gendersPackage <- gendersPackage %>%
+  dplyr::mutate( gender=gsub("^female", "Female", gsub("^male", "Male", gender) ) ) %>%
+  dplyr::select( name, gender ) %>%
+  dplyr::rename( nombre=name )
+
+namesDf <- dplyr::left_join( namesDf, gendersPackage )
+
+genderFirstName <- namesDf %>% 
+  dplyr::filter( nameOrder == 1 ) %>%
+  dplyr::select( id, gender )
+
+genderConsensus <- namesDf %>%
+  dplyr::group_by( id, gender ) %>%
+  dplyr::summarize( cnt=dplyr::n() ) %>%
+  na.omit() %>%
+  reshape2::dcast( id ~ gender, value.var="cnt", fun.aggregate = length) %>%
+  dplyr::mutate( 
+    genderConsensus=dplyr::case_when(
+      Male > Female ~ "Male", 
+      Female > Male ~ "Female",
+      (Male == Female & Female > 0) ~ "Ambiguous",
+      is.numeric(Male) ~ "Unknown" )
+  )
+
+genderAssignment <- dplyr::full_join( genderConsensus, genderFirstName )
+
+genderAssignment$genderFinal <- with( genderAssignment, 
+               ifelse( genderConsensus %in% c("Ambiguous", "Other"), 
+                       gender, genderConsensus ) )
+
+payData <- payData %>% 
+  dplyr::left_join( genderAssignment[,c("id", "genderFinal")] ) %>%
+  dplyr::rename( gender=genderFinal ) %>%
+  dplyr::select( -pago_bruto )
+
+payData$gender[is.na(payData$gender)] <- "Unknown"
+
+```
+
+Usando esta estrategia, pude asignar una identidad de género a `r format(sum(payData$gender %in% c("Male", "Female")), big.mark=",")`, o `r round(100*(sum(payData$gender %in% c("Male", "Female"))/nrow(payData)))`%  de los profesores e investigadores de la UNAM. De éstos, `r format( sum(payData$gender %in% "Female"), big.mark=",")` (`r round(100*sum(payData$gender %in% "Female")/sum(payData$gender %in% c("Male", "Female")))`%) fueron mujeres. Este estimado del porcentage de mujeres es consistente con los [reportes que la misma UNAM.](https://www.gaceta.unam.mx/vive-la-unam-proceso-de-avance-en-igualdad-de-genero/).
+
+# Las posiciones de más alto rango están ocupadas principalmente por hombres
+
+```{r, echo=FALSE}
+
+library(ggplot2)
+library(ggpubr)
+library(cowplot)
+theme_set(theme_cowplot())
+
+pval <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  wilcox.test( `pago_total`~gender, data=. )
+
+meanDiff <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") )  %>%
+  dplyr::group_by( gender ) %>%
+  dplyr::summarise( tot=mean(pago_total)) %>%
+  tidyr::pivot_wider( names_from=gender, values_from=tot ) %>%
+  dplyr::mutate( diff=Male - Female ) %>%
+  dplyr::pull(diff)
+
+```
+
+**Encontré una diferencia significativa entre los salarios ganados por mujeres y hombres. ($`r paste0("p = ", gsub("e", " * 10^{", format( pval$p.value, digits=2)), "}")`$). En promedio, los profesores ganan `r format( round(meanDiff), big.mark=",")` pesos mexicanos (MXN) más que las profesoras.** La gráfica a continuación muestra la distribución de salarios en cada género. 
+
+```{r, fig.height=3, fig.width=6}
+library(cowplot)
+library(ggplot2)
+theme_set(theme_cowplot())
+
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  ggplot( aes( pago_total, col=gender ) ) +
+  geom_density() +
+  geom_segment(
+    aes(x = x1, y = y1+.2e-5, xend = x1, yend = y1),
+    data = data.frame(x1=c(70000, 125000), y1=c(1.2e-5, .2e-5) ),
+    inherit.aes=FALSE,
+    arrow = arrow(length = unit(0.03, "npc") ) ) +
+  labs(y="Densidad", x="Salario mensual de la UNAM (MXN)", col="") +
+  scale_colour_manual(values=c(Female="#e41a1c", Male="#377eb8"), labels=c("Mujeres", "Hombres") )
+```
+
+Estas distribuciones muestran varias modas, y hay dos modas en los salarios de más elevados que son más prominentes para los hombres que para las mujeres (vean las flechas). Estos patrones sugieren que las posiciones de rangos superiores están ocupadas principalmente por hombres.
+
+Para verificar esto, grafiqué el porcentaje de mujeres en cada título académico en función del salario promedio en ese título.
+
+```{r, fig.height=3, fig.width=4}
+library(cowplot)
+theme_set(theme_cowplot())
+
+contractSummary <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  dplyr::group_by( academic_title ) %>%
+  dplyr::summarise( num=dplyr::n(), avePay=mean( pago_total ) ) %>%
+  dplyr::arrange( desc(avePay) )
+
+payPerGenderSumm <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  dplyr::group_by( academic_title, gender ) %>%
+  dplyr::summarise( num=dplyr::n() ) %>%
+  tidyr::pivot_wider(names_from="gender", values_from="num", values_fill=list(num=0)) %>%
+  dplyr::mutate( femalePercent=100*(Female/(Male+Female) )) %>%
+  dplyr::right_join( contractSummary ) %>%
+  dplyr::ungroup() 
+
+payPerGenderSumm %>%
+#  dplyr::filter( num > 3 ) %>%
+  ggplot( aes( avePay/1000, femalePercent) ) +
+  geom_point() +
+  geom_hline(yintercept=50, col="red") +
+  ylim(0, 100) +
+  labs(x="Salario mensual (x 1,000 MXN)", y="Porcentaje de mujeres")
+
+```
+
+En la gráfica anterior, la división entre hombres y mujeres se centra alrededor del 50% para la mayoría de los puestos académicos. **Pero entre los 6 títulos académicos que están mejor pagados, el porcentaje de mujeres está muy por debajo del 50%**.
+
+El siguiente código extrae los contratos donde el salario mensual promedio es superior a 50,000 pesos. Para todos estos contratos excepto uno, el porcentaje de mujeres es inferior al 40%. Los títulos académicos en esta lista son los puestos más prestigiosos, tales como profesores eméritos e Investigadores/Profesores Titulares (equivalente a *full professors* en el sistema estadounidense).
+
+```{r}
+
+payPerGenderSumm %>%
+  dplyr::filter( avePay > 50000) %>%
+  dplyr::select( academic_title, num, femalePercent, avePay )
+
+```
+
+Curiosamente, varios puestos de medio tiempo están ocupados principalmente por hombres.
+
+```{r}
+
+payPerGenderSumm %>%
+  dplyr::filter( femalePercent < 40, grepl("MEDIO TIEMPO", academic_title ) ) %>%
+  dplyr::select( academic_title, femalePercent, avePay )
+
+```
+
+**El análisis muestra una brecha salarial en la que los salarios de los hombres es mayor que los salarios de las mujeres.** Esta diferencia se explica porque en los puestos de mayor rango, el porcentage de mujeres es muy bajo.
+
+# Las mujeres ganan 542 MXN más que los hombres con el mismo contrato
+
+Luego hice una pregunta ligeramente distinta: **¿Existe una brecha salarial de género para los miembros de la facultad aún cuando tienen los mismos puestos académicos? **
+
+Para responder a esta pregunta, hice una regresión lineal
+
+$$y_{i} = \beta_{0} + \beta_{1}^{female}x_{1i} + \sum_{j=2}^{q} {{\beta}_{j}^{contract}x_{ji}} + 
+\epsilon_{i}, $$
+
+donde $y_ {i}$ es el salario del individuo $i$ y $q$ es el número de posibles contratos. $\beta_{0}$ es el coeficiente de intercepción, que estima el salario promedio para los hombres que tienen un contrato que se selecciona arbitrariamente como el nivel base. $x_{1i}$ es una variable indicadora que es igual a $1$ si el individuo $i$ es una mujer y es igual a $0$ si el individuo $i$ es un hombre. $x_{ji}$ son $q-1$ variables indicadoras que son iguales a 1 si el individuo $i$ tiene un contrato $j$ y son iguales a $0$ si el individuo $i$ no tiene el contrato $j$. $\epsilon_{i}$ es el error que sigue una distribución normal.
+
+El coeficiente de interés en el modelo es $\beta_{1}^{female}$, que estima la diferencia en el salario que las mujeres reciben en comparación con los hombres después de ajustar las diferencias salariales entre los diferentes contratos, que se estiman por los coeficientes ${\beta}_{j}^{contrato}$.
+
+```{r}
+
+testable <- as.character( payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::summarise( num=dplyr::n() ) %>%
+  dplyr::filter( num > 15 ) %>%
+  dplyr::pull( contrato ) )
+
+minN <- min( payData[payData$contrato %in% testable,] %>%
+  dplyr::group_by( gender, contrato ) %>%
+  dplyr::summarise( n=dplyr::n() ) %>%
+  dplyr::pull( n ) )
+
+stopifnot( minN > 0 )
+
+fit <- lm( pago_total ~ contrato + gender,
+          data={
+            dplyr::filter(payData, gender %in% c("Male", "Female"), contrato %in% testable ) %>%
+              dplyr::mutate( gender=factor(gender, levels=c("Male", "Female"))) } )
+
+coefFemale <- coefficients(fit)[["genderFemale"]]
+coefFemale
+
+pvalLm <- broom::tidy(anova(fit)) %>%
+  dplyr::filter( term == "gender" ) %>%
+  dplyr::pull(p.value)
+pvalLm
+
+```
+
+El valor $p$ de un análisis de varianza indica que existe una diferencia significativa en los salarios que las mujeres ganan en comparación con los hombres que trabajan con los mismos contratos. **El coeficiente resultante $\beta_{1}^{femenino}$ indica que las mujeres ganan en promedio `r round (coefFemale)` pesos más que los hombres.** Este resultado no es intuitivo dado que históricamente, debido a la discriminación por género, los hombres ganan más que las mujeres.
+
+Para averiguar la razón de estas brechas salariales, analicé la diferencia de salarios en cada contrato individualmente. Para cada contrato, pregunté si había diferencias en los salarios entre los miembros dependiendo de su identidad de género.
+
+```{r, fig.height=3, fig.width=6}
+
+contractSummary <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::summarise( num=dplyr::n(), avePay=mean( pago_total ) ) %>%
+  dplyr::arrange( desc(avePay) )
+
+payPerGenderSumm <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female") ) %>%
+  dplyr::group_by( contrato, gender ) %>%
+  dplyr::summarise( num=dplyr::n() ) %>%
+  tidyr::pivot_wider(names_from="gender", values_from="num", values_fill=list(num=0)) %>%
+  dplyr::mutate( femalePercent=100*(Female/(Male+Female) )) %>%
+  dplyr::right_join( contractSummary ) %>%
+  dplyr::ungroup() 
+
+differentPays <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>%
+  dplyr::mutate(gender=factor(gender, levels=c("Female", "Male"))) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::group_map( ~ cbind( 
+    broom::tidy( t.test( pago_total ~ gender, data=.x )),
+    contrato=unique( .x$contrato ), stringsAsFactors=FALSE), keep=TRUE ) %>%
+  dplyr::bind_rows() %>%
+  dplyr::select( estimate, estimate1, estimate2, conf.low, conf.high, contrato, p.value ) %>%
+  dplyr::mutate( q.value = p.adjust( p.value, method="BH")) %>%
+  dplyr::filter( q.value < 0.1 ) %>%
+  dplyr::left_join(  payPerGenderSumm[,c("contrato", "avePay")] ) %>%
+  dplyr::mutate( aveDiff=(100*estimate1/estimate2) - 100 )
+
+nrow(differentPays)
+
+```
+
+**Dos contratos de tiempo completo, *Investigador Titular B* y *Profesor Titular C*, fueron significativos a una tasa de descubrimiento falso del 10%.** La siguiente gráfica muestra la distribución de salarios para estos dos contratos.
+
+```{r, fig.width=5.5, fig.height=2.8}
+library(cowplot)
+theme_set(theme_cowplot())
+payData %>%
+  dplyr::filter( 
+    contrato == dplyr::pull(differentPays, contrato), 
+    gender %in% c("Male", "Female") ) %>%
+  dplyr::mutate( contrato = gsub(" TIEMPO COMPLETO|^\\S+ ", "", contrato) ) %>%
+  ggplot( aes(pago_total/1000, col=gender ) ) +
+  geom_density() +
+  facet_wrap( ~contrato ) +
+  theme(legend.pos="top", axis.line=element_blank()) +
+  labs(x="Salario mensual (x 1,000 MXN)", y="Densidad", col="") +
+  panel_border(colour="black", size=1) +
+  scale_colour_manual(values=c(Female="#e41a1c", Male="#377eb8"), labels=c("Mujeres", "Hombres"))
+```
+
+En estos dos contratos, el salario de las mujeres es en promedio `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% y `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% más alto que el salario de los hombres, respectivamente. 
+
+El gráfico a continuación muestra las diferencias entre los salarios de las mujeres en comparación con los hombres (eje $y$) para cada contrato (representado como un punto) en función del salario promedio del contrato (eje $x$). Los puntos están coloreados según el porcentaje de mujeres en ese contrato. Las líneas continuas verticales representan los intervalos de confianza del 95% de las diferencias de medias. Los contratos por arriba de la línea punteada horizontal indican que el salario promedio es más alto para las mujeres que para los hombres, y los puntos debajo de la línea punteada horizontal indican que el salario promedio de las mujeres es más bajo en comparación con el de los hombres.
+
+```{r, fig.height=3.2, fig.width=5.9}
+library(cowplot)
+theme_set(theme_cowplot())
+
+cols <- c( colorRampPalette( c("#b2182b", "#f4a582", "#bababa"), bias=0.5)(100),
+   rev(colorRampPalette( c( "#2166ac", "#92c5de", "#bababa"), bias=0.5)(100) ) )
+
+payData %>%
+  dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>%
+  dplyr::mutate(gender=factor(gender, levels=c("Female", "Male"))) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::group_map( ~ cbind( 
+    broom::tidy(t.test( pago_total ~ gender, data=.x )),
+    contrato=unique( .x$contrato ), stringsAsFactors=FALSE ), keep=TRUE ) %>%
+  dplyr::bind_rows() %>%
+  dplyr::select( estimate, conf.low, conf.high, contrato, p.value ) %>%
+  dplyr::mutate( q.value = p.adjust( p.value, method="BH")) %>%
+  dplyr::left_join( payPerGenderSumm ) %>%
+  ggplot( aes( avePay/1000, estimate/1000, col=femalePercent) ) +
+  geom_errorbar(aes(ymin=conf.low/1000, ymax=conf.high/1000), width=.1) +
+  geom_point() + 
+  scale_colour_gradientn(colours=cols,  limits=c(0, 100)) +
+  geom_hline(yintercept=0, col="black", alpha=0.95, linetype="longdash") +
+  annotate("text", x=27, y=6.5, label="   ↑ Mujeres ganan más", color = "black") +
+  annotate("text", x=27, y=-6.5, label="     ↓ Hombres ganan más", color = "black") +
+  ylim(-6.5, 15) +
+  labs(x="Salario mensual (x 1,000 MXN)", 
+       y="Diferencias de salarios\n( Mujeres - Hombres )",
+       col="% de mujeres")
+
+```
+
+
+```{r, echo=FALSE}
+
+numAboveZero <- payData %>%
+  dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>%
+  dplyr::mutate(gender=factor(gender, levels=c("Female", "Male"))) %>%
+  dplyr::group_by( contrato ) %>%
+  dplyr::group_map( ~ cbind( 
+    broom::tidy(t.test( pago_total ~ gender, data=.x )),
+    contrato=unique( .x$contrato ), stringsAsFactors=FALSE ), keep=TRUE ) %>%
+  dplyr::bind_rows()
+
+```
+
+Para el `r round(100*sum(numAboveZero$estimate > 0)/nrow(numAboveZero))`% de los contratos, (`r sum(numAboveZero$estimate > 0)` out of `r nrow(numAboveZero)`), el salario promedio es más elevado en las mujeres que en los hombres. Ésto explica por qué el coeficiente $\beta_{1}^{female}$ es estadísticamente significativo en el modelo lineal. Sin embargo, los intervalos de confianza del 95% sobrelapan con el valor cero para el `r sum(Vectorize(dplyr::between)(0, numAboveZero$conf.low, numAboveZero$conf.high))` de los contratos, por lo que solo dos de ellos, *Investigador Titular B* y *Profesor Titular C*, son estadísticamente significativos en las pruebas individuales de cada contrado después de corregir por pruebas múltiples. 
+
+# Conclusiones
+
+```{r echo=FALSE}
+examp <- round( payPerGenderSumm %>%
+  dplyr::filter( contrato == "I2199 INVESTIGADOR EMERITO" ) %>%
+  dplyr::pull(femalePercent) )
+```
+
+**Mi análisis muestra que en el profesorado de la UNAM, los hombres ganan `r round(100*meanDiff/mean(payData$pago_total[payData$gender=="Male"]))`% más que las mujeres. Esta brecha salarial se explica porque los títulos académicos de alto rango están ocupados principalmente por hombres.** Por ejemplo, solo el `r examp`% de los *Investigadores Eméritos* son mujeres. 
+
+Cuando busqué brechas salariales de género entre profesores en cada contrato individualmente, encontré que **en promedio las mujeres ganan `r round(100*coefFemale/mean(payData %>% dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>% dplyr::pull(pago_total)))`% más que los hombres que tienen el mismo contrato.** Esta brecha salarial es más prominente en dos contratos, *Investigador Titular B* y *Profesor Titular C*, donde las mujeres ganan `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% y `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% más que los hombres, respectivamente. 
+
+**En los puestos académicos donde el porcentaje de hombres es alto, que tienden a ser puestos de alto rango, las pocas mujeres en esos puestos ganan más en promedio que los hombres**. Esto es muy intrigante y no tengo una explicación para ello. Una hipótesis es que los hombres son promovidos con más frecuencia que las mujeres. En este escenario, las investigadoras permanecerían en puestos de rango inferior durante más tiempo y, por lo tanto, acumularían más aumentos salariales.
+
+Sin embargo, el mayor problema es la falta de representación de las mujeres en puestos de alto rango: **para lograr la equidad de género, la UNAM debe promover a más mujeres a los títulos académicos de más alto rango**.
+
+# *Session Information*
+
+```{r}
+sessionInfo()
+```
+
+# Referencias
