@@ -1,21 +1,19 @@
 ---
 title: "Gender equality in UNAM's academic salaries"
 author: "Alejandro Reyes"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
   html_document:
     toc: yes
     toc_depth: 2
     toc_float: yes
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
 ---
 
 The gender wage gap is the average difference in income between men and women. According to the Organisation for Economic Cooperation and Development, in 2018 the gender wage gap was 13.5% globally and 14% in Mexico [^1]. The reasons behind the wage gap include discrimination, occupational segregation and gender roles established by society. Research studies have estimated that gender wage gaps may not disappear before 2109 [^2]. 
 
 The National Autonomous University of Mexico (UNAM, for its acronym in Spanish) is one of the biggest universities in Latin America. More than 10,000 researchers work in UNAM's laboratories. Because UNAM is funded by taxpayers, the University is required to release all information about contracts and wages of each faculty member. These data are available in the [UNAM's transparency website](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). 
 
-The current blog post describes a documented data analysis that addresses the question: **Is UNAM paying its male and female faculty equally?**
+The current blog post describes a documented data analysis that addresses the question: **Is UNAM paying its male and female faculty equally?** The code to reproduce this analysis can be found in [my Github account](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/unam_ge.Rmd).
 
 [^1]: https://data.oecd.org/earnwage/gender-wage-gap.htm
 [^2]: https://www.theguardian.com/society/2011/aug/31/cmi-equal-pay-report
@@ -28,7 +26,7 @@ knitr::opts_chunk$set( echo = TRUE, warnings=FALSE, message = FALSE, cache=TRUE 
 
 ## UNAM's wages data
 
-All UNAM's wage data is [publicly available](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). I downloaded these data and saved them as tab-separated file. I also did some additional data wrangling to remove non-ASCII characters and have nicer column names. 
+All UNAM's wage data is [publicly available](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores). I downloaded these data and saved them as tab-separated file. I did some additional data wrangling to remove non-ASCII characters and have nicer column names. 
 
 ```{r cache=FALSE}
 library(magrittr)
@@ -63,9 +61,9 @@ These data contain information for `r format( nrow(payData), big.mark= ",")` res
 
 # Women constitute 45% of UNAM's faculty
 
-Then, I used the R package called [*gender*](https://cran.r-project.org/web/packages/gender/index.html) to assign genders to each faculty member based on their first names. 
+Then, I aimed at assigning gender to each faculty member based on their first names. In my first attempt, I created catalogs of masculine and feminine names by scraping data from Wikipedia (the code for that can be found [here](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/WikipediaParseNameCatalogs.Rmd)). But I was pointed to an R package called [*gender*](https://cran.r-project.org/web/packages/gender/index.html), which uses US social security and census data to assign a gender to names. I used the *gender* package because it was better and cleaner than my name catalogs. 
 
-In Mexico, it is common for people to have more than one first name and names like "María José" can be tricky, since "María" is a feminine name, "José" is a masculine name and the combination of the two, "María José", is a name given to women. In these cases, I considered both the gender of the first first name and the consensus gender of the individual names. In general, these two strategies gave almost identical results. For researchers with a single first name, the assignment was straightforward. For names without a perfect match, I selected the gender of the first first name or the consensus gender of the names whenever the first first name was uninformative. Note that in my analysis, gender defaults to "man" and "woman" and as a result, I failed to include people who experience their gender identity as falling outside these two categories. 
+In Mexico, it is common for people to have more than one first name and names like "María José" can be tricky, since "María" is a feminine name, "José" is a masculine name and the combination of the two, "María José", is a name given to women. In these cases, I considered both the gender of the first first name and the consensus gender of the individual names. In general, these two strategies gave almost identical results. For researchers with a single first name, the assignment was straightforward. For researchers with more than one first name, I selected the gender of the first first name or the consensus gender of the names whenever the first first name was uninformative. **Note that in my analysis, gender defaults to "man" and "woman" and as a result, I failed to include people who experience their gender identity as falling outside these two categories.**
 
 ```{r}
 
@@ -162,9 +160,9 @@ payData %>%
   scale_colour_manual(values=c(Female="#e41a1c", Male="#377eb8"))
 ```
 
-These distributions show several modes, and there are two peaks towards the higher-ranking salaries that are higher for men than for women (see the arrows). These patterns suggest that higher-rank positions are dominated by man. 
+These distributions show several modes, and there are two peaks towards the higher-ranking salaries that are higher for men than for women (see the arrows). These patterns suggest that higher-rank positions are dominated by men. 
 
-Then, I asked whether higher academic titles are dominated by men. To do so, I plotted the percentage of women in each academic title as a function of the average salary in that title. 
+Thus, I plotted the percentage of women in each academic title as a function of the average salary in that title. 
 
 ```{r, fig.height=3, fig.width=4}
 library(cowplot)
@@ -197,7 +195,7 @@ payPerGenderSumm %>%
 
 In the plot above, the split between man and women is centered around 50% for most positions. **But among the top 6 academic titles that are better paid, the percentage of women is way below 50%**. 
 
-The code below pulls the contracts where the average salary is above 50,000 MXN per month. For all contracts except one, the percentage of women is below 40%. The academic titles in this list are the most prestigious positions such as Emeritus Faculty, *Investigadores/Profesores Titulares* (equivalent to full professor in the US system).
+The code below pulls the contracts where the average salary is above 50,000 MXN per month. For all contracts except one, the percentage of women is below 40%. The academic titles in this list are the most prestigious positions such as Emeritus Faculty and *Investigadores/Profesores Titulares* (equivalent to full professors in the US system).
 
 ```{r}
 
@@ -217,7 +215,7 @@ payPerGenderSumm %>%
 
 ```
 
-**The analysis so far shows an overall difference of male faculty earning more money than female faculty. This difference is explained by male faculty members having higher academic titles than female faculty members.**
+**The analysis shows an overall difference of male faculty earning more money than female faculty.** This difference is explained by male faculty members having higher academic titles than female faculty members.
 
 # Women earn 542 MXN more than men with the same contract
 
@@ -228,7 +226,7 @@ To answer this question, I fitted a linear model
 $$y_{i} = \beta_{0} + \beta_{1}^{female}x_{1i} + \sum_{j=2}^{q} {{\beta}_{j}^{contract}x_{ji}} + 
 \epsilon_{i}, $$
 
-where $y_{i}$ is the salary of individual $i$ and $q$ is the number of possible contracts. $\beta_{0}$ is the intercept term, which estimates the mean salary for men that have an arbitrary base level contract. $x_{1i}$ is a dummy variable that is equal to $1$ if individual $i$ is a female and is equal to $0$ if individual $i$ is a male. $x_{ji}$ are dummmy variables that are equal to 1 if individual $i$ has a contract $j$ and are equal to $0$ if individual $i$ does not have contract $j$. $\epsilon_{i}$ is the error term that is normally distributed.
+where $y_{i}$ is the salary of individual $i$ and $q$ is the number of possible contracts. $\beta_{0}$ is the intercept term, which estimates the mean salary for men that have a contract that is arbitrarily selected as base level. $x_{1i}$ is a dummy variable that is equal to $1$ if individual $i$ is a female and is equal to $0$ if individual $i$ is a male. $x_{ji}$ are $q-1$ dummy variables that are equal to 1 if individual $i$ has a contract $j$ and are equal to $0$ if individual $i$ does not have contract $j$. $\epsilon_{i}$ is the error term that is normally distributed.
 
 The coefficient of interest in the model is $\beta_{1}^{female}$, which estimates the difference in salary that women receive compared to men after adjusting for salary differences between different contracts, which are estimated by the ${\beta}_{j}^{contract}$ coefficients. 
 
@@ -302,7 +300,7 @@ nrow(differentPays)
 
 ```
 
-**Two full-time contracts, *Investigador Titular B* and *Profesor Titular C*,were significant at a false discovery rate of 10%.** The plot below shows the distributions of wages for these two contracts.
+**Two full-time contracts, *Investigador Titular B* and *Profesor Titular C*, were significant at a false discovery rate of 10%.** The plot below shows the distributions of wages for these two contracts.
 
 ```{r, fig.width=5.5, fig.height=2.8}
 library(cowplot)
@@ -377,11 +375,11 @@ For `r round(100*sum(numAboveZero$estimate > 0)/nrow(numAboveZero))`% of the con
 
 **My analysis shows that among UNAM's faculty members, men earn on average `r round(100*meanDiff/mean(payData$pago_total[payData$gender=="Male"]))`% more than women faculty. This wage gap is explained by the high-rank academic titles being dominated by men.** For example, only 15% of UNAM's faculty members with the highest academic titles, *Investigadores Emeritos*, are women. 
 
-When I tested for differences in wages between male and female faculty with the same contracts, I found that **women earn on average `r round(100*coefFemale/mean(payData %>% dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>% dplyr::pull(pago_total)))`% more than men with the same contract**. This difference is more pronounced in two contracts, *Investigador Titular B* and *Profesor Titular C*,  where women earn `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% and `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% more than men, respectively. However, these differences in wages are minimal.
+When I tested for differences in wages between male and female faculty with the same contracts, I found that **women earn on average `r round(100*coefFemale/mean(payData %>% dplyr::filter( gender %in% c("Male", "Female"), contrato %in% testable ) %>% dplyr::pull(pago_total)))`% more than men with the same contract**. This difference is more pronounced in two contracts, *Investigador Titular B* and *Profesor Titular C*,  where women earn `r round(differentPays$aveDiff[differentPays$contrato == "I6593 INVESTIGADOR TITULAR B TIEMPO COMPLETO"], 1)`% and `r round(differentPays$aveDiff[differentPays$contrato == "D6696 PROFESOR TITULAR C TIEMPO COMPLETO"], 1)`% more than men, respectively. 
 
-**In the academic positions where the percentage of men is high, which tend to be senior positions, the few women in those positions earn more than men**. This is very intriguing and I don't have an explanation for it. One hypothesis is that men are promoted more often than women. In this scenario, female researchers would remain in lower-rank positions for longer and thus would accumulate more salary increases. 
+**In the academic positions where the percentage of men is high, which tend to be senior positions, the few women in those positions earn more than men on average**. This is very intriguing and I don't have an explanation for it. One hypothesis is that men are promoted more often than women. In this scenario, female researchers would remain in lower-rank positions for longer and thus would accumulate more salary increases. 
 
-The biggest problem, however, is the lack of representation of women in senior faculty positions: **in order to reach gender equality, UNAM should promote more women to high-rank academic titles**. 
+The biggest problem, however, is the lack of representation of women in senior faculty positions: **in order to reach gender equality, UNAM should promote more women to the higher-rank academic titles**. 
 
 # Session Information
 
