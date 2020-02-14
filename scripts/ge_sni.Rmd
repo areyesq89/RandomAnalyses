@@ -13,7 +13,7 @@ El Sistema Nacional de Investigadores ([*SNI*](https://www.conacyt.gob.mx/index.
   + Investigador Nacional con tres niveles
   + Investigador Emérito
 
-Hace unos meses, escribí un blog post acerca de un análisis de [la brecha salarial de género en puestos académicos de la UNAM en el 2019](http://alejandroreyes.org/brecha-salarial-en-la-unam-en-el-2019/). Dudo que la Dra. Alvarez-Buylla, directora del *CONACYT*, haya leído mi blog post. Sin embargo, la Dra. Alvarez-Buylla escribió el día siguiente en twitter:
+Hace unos meses, escribí un blog post acerca de un análisis de [la brecha salarial de género en puestos académicos de la UNAM en el 2019](http://alejandroreyes.org/brecha-salarial-en-la-unam-en-el-2019/). Dudo que la Dra. Álvarez-Buylla, directora del *CONACYT*, haya leído mi blog post. Sin embargo, la Dra. Álvarez-Buylla escribió el día siguiente en twitter:
 
 <blockquote class="twitter-tweet"><p lang="es" dir="ltr">Me preocupa mucho la brecha de género; este y otros problemas del Sistema Nacional de Investigadores deben corregirse. A 35 años de su creación, es momento de pensar colectivamente en su transformación virtuosa.<br> <a href="https://twitter.com/hashtag/CienciaPorM%C3%A9xico?src=hash&amp;ref_src=twsrc%5Etfw">#CienciaPorMéxico</a> <a href="https://t.co/j5tDP3SeE9">pic.twitter.com/j5tDP3SeE9</a></p>&mdash; María Elena Álvarez-Buylla Roces (@ElenaBuylla) <a href="https://twitter.com/ElenaBuylla/status/1204600047373094914?ref_src=twsrc%5Etfw">December 
 11, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
@@ -51,6 +51,8 @@ dat <- dplyr::left_join( dat, genderDf )
 
 ```
 
+# Análisis
+
 El gráfico a continuación presenta para cada distinción del *SNI* (eje $x$), el porcentage de individuos con esa distinción que son mujeres (eje $y$). El gráfico presenta los datos para cada área académica del *SNI*.
 
 ```{r, fig.height=4.5, fig.width=5}
@@ -86,9 +88,9 @@ dat %>%
 
 El gráfico demuestra el gran reto al que se enfrenta la "transformación virtuosa" de *CONACYT*. En general, **entre más alta la distinción del *SNI* menos mujeres hay**. Hay áreas en las que el sesgo es aún mayor, de las cuales describo tres áreas con patrones interesantes:
 
-  + **En el área de físico-matemática y ciencias de la tierra, el porcentage de mujeres es muy bajo en todos los niveles del *SNI*. Hay un total de `r dat$total[dat$area == "I:FISICO-MATEMÁTICAS/TIERRA" & dat$Nivel == "3"]` investigadores con *SNI* 3, de las cuales solo el `r round(dat$percent_females[dat$area == "I: FISICO-MATEMÁTICAS/TIERRA" & dat$Nivel == "3"])`% son mujeres.**
+  + **En el área de físico-matemática y ciencias de la tierra, el porcentage de mujeres es muy bajo en todos los niveles del *SNI*. Hay un total de `r dat$total[dat$area == "I: FISICO-MATEMÁTICAS/TIERRA" & dat$Nivel == "3"]` investigadores con *SNI* 3, de las cuales solo el `r round(dat$percent_females[dat$area == "I: FISICO-MATEMÁTICAS/TIERRA" & dat$Nivel == "3"])`% son mujeres.**
   + **En el área de ingenierías, el sesgo es aún mayor: de los `r dat$total[dat$area == "VII: INGENIERÍAS" & dat$Nivel == "3"]` investigadores con *SNI* 3, solo el `r round(dat$percent_females[dat$area == "VII: INGENIERÍAS" & dat$Nivel == "3"])`% son mujeres.**
-  + **En el área de biotecnología y ciencias de la tierra, el `r round(dat$percent_females[dat$area == "VI: BIOTECNOLOGÍA/AGROPECUARIAS" & dat$Nivel == "C"])` de los candidatos a doctor son mujeres, sin embargo este porcentage cae rápidamente conforme la distinción es mas prestigiosa: solo el `r round(dat$percent_females[dat$area == "VI: BIOTECNOLOGÍA/AGROPECUARIAS" & dat$Nivel == "3"])`% de los investigadores con *SNI* 3 son mujeres**. 
+  + **En el área de biotecnología y ciencias de la tierra, el `r round(dat$percent_females[dat$area == "VI: BIOTECNOLOGÍA/AGRO" & dat$Nivel == "C"])` de los candidatos a doctor son mujeres, sin embargo este porcentage cae rápidamente conforme la distinción es mas prestigiosa: solo el `r round(dat$percent_females[dat$area == "VI: BIOTECNOLOGÍA/AGRO" & dat$Nivel == "3"])`% de los investigadores con *SNI* 3 son mujeres**. 
   
 *CONACYT* mandó un e-mail hace unos días diciendo que las convocatorias para ingreso y permanencia al *SNI* se abrirán en Febrero del 2020. **Ojalá que la comisión dictaminadora tenga una estrategia para reducir los sesgos de género del *SNI***.
   
