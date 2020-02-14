@@ -53,12 +53,13 @@ dat <- dplyr::left_join( dat, genderDf )
 
 El gráfico a continuación presenta para cada distinción del *SNI* (eje $x$), el porcentage de individuos con esa distinción que son mujeres (eje $y$). El gráfico presenta los datos para cada área académica del *SNI*.
 
-```{r, fig.height=3.5, fig.width=8}
+```{r, fig.height=4.5, fig.width=5}
 
 dat$area <- gsub( "Área ", "", dat$`Área.del.Conocimiento`)
 dat$area <- gsub("CIENCIAS |DE LA", "", dat$area)
 dat$area <- gsub(" Y ", "/", dat$area)
 dat$area <- gsub("/ ", "/", dat$area)
+dat$area <- gsub("AGROPECUARIAS", "AGRO", dat$area)
 
 dat <- dat %>%
   dplyr::select( gender, area, Nivel  ) %>%
@@ -75,10 +76,11 @@ dat %>%
   ggplot( aes( Nivel, percent_females, col=area, group=area ) ) +
   geom_point() +
   geom_line() +
-  theme(legend.pos="right") +
+  theme(legend.pos="bottom", legend.text=element_text(size=9)) +
   ylim(0, 100) +
   geom_hline(yintercept=50, col="#000000", linetype="dashed") +
-  labs(y="Porcentage de mujeres", x="Nivel de SNI", col="", title="CONACYT SNI 2018")
+  labs(y="Porcentage de mujeres", x="Nivel de SNI", col="", title="CONACYT SNI 2018") +
+  guides(col=guide_legend(ncol=2))
 
 ```
 
