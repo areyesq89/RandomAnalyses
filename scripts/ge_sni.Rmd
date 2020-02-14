@@ -1,0 +1,92 @@
+---
+title: "Sesgos de género en el SNI de CONACYT"
+author: "Alejandro Reyes"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+El Sistema Nacional de Investigadores ([*SNI*](https://www.conacyt.gob.mx/index.php/el-conacyt/sistema-nacional-de-investigadores)), es un programa del Consejo Nacional de Ciencia y Tecnología de México ([*CONACYT*](http://conacyt.gob.mx/)) que tiene como objetivo reconocer el trabajo de las personas que se dedican a la ciencia en México. Como investigadores, nosotros aplicamos y podemos recibir distinciones que simbolizan la calidad y prestigio de nuestras contribuciones científicas. Las distinciones que podemos recibir son:
+
+  + Candidato a Investigador Nacional
+  + Investigador Nacional con tres niveles
+  + Investigador Emérito
+
+Hace unos meses, escribí un blog post acerca de un análisis de [la brecha salarial de género en puestos académicos de la UNAM en el 2019](http://alejandroreyes.org/brecha-salarial-en-la-unam-en-el-2019/). Dudo que la Dra. Alvarez-Buylla, directora del *CONACYT*, haya leído mi blog post. Sin embargo, la Dra. Alvarez-Buylla escribió el día siguiente en twitter:
+
+<blockquote class="twitter-tweet"><p lang="es" dir="ltr">Me preocupa mucho la brecha de género; este y otros problemas del Sistema Nacional de Investigadores deben corregirse. A 35 años de su creación, es momento de pensar colectivamente en su transformación virtuosa.<br> <a href="https://twitter.com/hashtag/CienciaPorM%C3%A9xico?src=hash&amp;ref_src=twsrc%5Etfw">#CienciaPorMéxico</a> <a href="https://t.co/j5tDP3SeE9">pic.twitter.com/j5tDP3SeE9</a></p>&mdash; María Elena Álvarez-Buylla Roces (@ElenaBuylla) <a href="https://twitter.com/ElenaBuylla/status/1204600047373094914?ref_src=twsrc%5Etfw">December 
+11, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+Me llamó mucho la atención ese comentario al momento y me motivó a haver el análisis de este blog post. Me di a la tarea de explorar la gravedad de la situación a la que se refería la directora del *CONACYT* en su twit. Específicamente, me hice la pregunta: **¿Cómo se reflejan los sesgos de género en las distinciones del *SNI*?**
+
+## Datos
+
+En esta ocasión fue fácil conseguir los datos. En el portal de [datos abiertos del Gobierno de México](https://datos.gob.mx/), encontré una lista con los nombres de los investigadores y sus distinciones del *SNI* vigentes al año 2018. El código a continuación baja los datos del portal y usando el nombre de los investigadores, le asigna género a cada investigador con ayuda de un paquete de R llamado [*gender*](https://cran.r-project.org/web/packages/gender/index.html).  
+
+```{r, echo=FALSE}
+library(gender)
+library(magrittr)
+library(ggplot2)
+library(cowplot)
+theme_set(theme_cowplot())
+```
+
+```{r}
+fileName <- "Investigadores-SNI-Vigentes-2018.csv"
+if(!file.exists( fileName )){
+  download.file(
+    "https://www.conacyt.gob.mx/datosabiertos/Investigadores-SNI-Vigentes-2018.csv", 
+             destfile=fileName )
+}
+
+dat <- read.csv( fileName, header=TRUE, fileEncoding="latin1" )
+dat$primerNombre <- sapply( strsplit( as.character(dat$Nombre), " " ), "[[", 1 )
+
+genderDf <- unique( gender( dat$primerNombre, 2012 ) )[,c("name", "gender")]
+genderDf <- genderDf %>%
+  dplyr::rename( primerNombre=name )
+
+dat <- dplyr::left_join( dat, genderDf ) 
+
+```
+
+El gráfico a continuación presenta para cada distinción del *SNI* (eje $x$), el porcentage de individuos con esa distinción que son mujeres (eje $y$). El gráfico presenta los datos para cada área académica del *SNI*.
+
+```{r, fig.height=3.5, fig.width=8}
+
+dat$area <- gsub( "Área ", "", dat$`Área.del.Conocimiento`)
+dat$area <- gsub("CIENCIAS |DE LA", "", dat$area)
+dat$area <- gsub(" Y ", "/", dat$area)
+dat$area <- gsub("/ ", "/", dat$area)
+
+dat <- dat %>%
+  dplyr::select( gender, area, Nivel  ) %>%
+  na.omit() %>% 
+  dplyr::group_by( area, Nivel ) %>%
+  dplyr::summarise( males=sum( gender == "male" ), 
+                    females=sum( gender == "female"),
+                    total=dplyr::n() ) %>%
+  dplyr::mutate( percent_females=100*females/total )
+
+dat$Nivel <- relevel( dat$Nivel, "C" )
+
+dat %>%
+  ggplot( aes( Nivel, percent_females, col=area, group=area ) ) +
+  geom_point() +
+  geom_line() +
+  theme(legend.pos="right") +
+  ylim(0, 100) +
+  geom_hline(yintercept=50, col="#000000", linetype="dashed") +
+  labs(y="Porcentage de mujeres", x="Nivel de SNI", col="", title="CONACYT SNI 2018")
+
+```
+
+El gráfico demuestra el gran reto al que se enfrenta la "transformación virtuosa" de *CONACYT*. En general, **entre más alta la distinción del *SNI* menos mujeres hay**. Hay áreas en las que el sesgo es aún mayor, de las cuales describo tres áreas con patrones interesantes:
+
+  + **En el área de físico-matemática y ciencias de la tierra, el porcentage de mujeres es muy bajo en todos los niveles del *SNI*. Hay un total de `r dat$total[dat$area == "I:FISICO-MATEMÁTICAS/TIERRA" & dat$Nivel == "3"]` investigadores con *SNI* 3, de las cuales solo el `r round(dat$percent_females[dat$area == "I: FISICO-MATEMÁTICAS/TIERRA" & dat$Nivel == "3"])`% son mujeres.**
+  + **En el área de ingenierías, el sesgo es aún mayor: de los `r dat$total[dat$area == "VII: INGENIERÍAS" & dat$Nivel == "3"]` investigadores con *SNI* 3, solo el `r round(dat$percent_females[dat$area == "VII: INGENIERÍAS" & dat$Nivel == "3"])`% son mujeres.**
+  + **En el área de biotecnología y ciencias de la tierra, el `r round(dat$percent_females[dat$area == "VI: BIOTECNOLOGÍA/AGROPECUARIAS" & dat$Nivel == "C"])` de los candidatos a doctor son mujeres, sin embargo este porcentage cae rápidamente conforme la distinción es mas prestigiosa: solo el `r round(dat$percent_females[dat$area == "VI: BIOTECNOLOGÍA/AGROPECUARIAS" & dat$Nivel == "3"])`% de los investigadores con *SNI* 3 son mujeres**. 
+  
+*CONACYT* mandó un e-mail hace unos días diciendo que las convocatorias para ingreso y permanencia al *SNI* se abrirán en Febrero del 2020. **Ojalá que la comisión dictaminadora tenga una estrategia para reducir los sesgos de género del *SNI***.
+  
