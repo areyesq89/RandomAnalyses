@@ -1,0 +1,133 @@
+---
+title: "Resultados SNI 2020: sesgo de género"
+author: "Alejandro Reyes"
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(message=FALSE, warnings=FALSE)
+```
+
+
+Los resultados de la convocatoria del Sistema Nacional de Investigadores del año 2020 se acaban de publicar.
+**¿Cómo están estos resultados con respecto a igualdad de género?**
+
+Hace algunos meses, hice [un blogpost](http://alejandroreyes.org/sesgo-de-g%C3%A9nero-en-el-SNI-de-CONACYT/) en 
+el que analicé el sesgo de género que existe en el [Sistema Nacional de Investigadores (*SNI*)](https://www.conacyt.gob.mx/index.php/el-conacyt/sistema-nacional-de-investigadores) del Consejo Nacional
+de Ciencia y Tecnología (*CONACYT*). Entre otras cosas, noté que **el sesgo de género es evidente en todas las areas
+de investigación del SNI y el sesgo es mayor conforme aumenta el rango del *SNI***. En algunas ramas de investigación, el porcentaje de mujeres en los rangos mayores es menor al 10%. ¡Terrible!
+
+La Dra. Álvarez-Buylla, directora de *CONACYT*, ha expresado su preocupación por el sesgo de género 
+que existe en el *SNI* y su compromiso a mejorar la situación actual. Dado que los resultados de la
+convocatoria del *SNI* del 2020 fueron publicadas hace algunos días, me dio curiosidad **¿Qué tanto se ve reflejado
+el sesgo de género en los resultados de la convocatoria del *SNI* 2020?** A continuación presento un análisis "dominguero".
+
+## Procesamiento de datos
+
+El código a continuación, baja el *pdf* con los resultados de la convocatoria del *SNI* del año 2020, captura los datos 
+del documento y formatea los datos para poder analizarlos. 
+
+```{r}
+library(tabulizer)
+library(gender)
+library(magrittr)
+library(ggplot2)
+library(cowplot)
+theme_set(theme_cowplot())
+location <- "https://www.conacyt.gob.mx/images/SNI/2020/RESULTADOS_SNI_CONVOCATORIA_2020_INGRESO_O_PERMANENCIA.pdf"
+
+# Extract the table
+sniResFile <- "sni_results.rds"
+if( !file.exists(sniResFile) ){
+  out <- extract_tables(location)
+  saveRDS( out, file=sniResFile )
+}
+
+sni2020 <- readRDS( sniResFile )
+sni2020 <- lapply( sni2020, function(x){
+  x[,!colSums(x == "") == nrow(x)]
+} )
+stopifnot(all(sapply(sni2020, ncol) == 5) )
+sni2020 <- Reduce( rbind, sni2020 )
+sni2020 <- sni2020[sni2020[,5] != "Nacional",]
+sni2020 <- sni2020[sni2020[,5] != "",]
+
+sni2020 <- sni2020 %>%
+  janitor::row_to_names(1) %>%
+  as.data.frame() %>%
+  dplyr::rename(lvl=`Nivel  otorgado`) %>%
+  dplyr::mutate( 
+    firstFirstName=gsub("(\\S+)\\s.*", "\\1", Nombre), 
+    lvl=factor( dplyr::case_when( 
+      lvl == "Investigador Nacional Nivel I" ~ "SNI I",
+      lvl == "Investigador Nacional Nivel II" ~ "SNI II",
+      lvl == "Investigador Nacional Nivel III" ~ "SNI III",
+      grepl("Prórroga", lvl) ~ "Prórroga",
+      grepl("Candidato", lvl) ~ "Candidato",
+      TRUE ~ lvl
+    ), levels=c("Prórroga", "Candidato", "SNI I", 
+                "SNI II", "SNI III") ) )
+
+```
+
+Usando el paquete [*gender*](https://cran.r-project.org/web/packages/gender/index.html), podemos 
+predecir el género de cada investigador con base en sus nombres de pila. 
+
+```{r}
+gender_df <- gender(unique(sni2020$firstFirstName)) %>%
+  dplyr::select( name, gender ) %>%
+  dplyr::rename( firstFirstName=name )
+
+sni2020 <- sni2020 %>%
+  dplyr::select( CVU, firstFirstName, lvl ) %>%
+  dplyr::left_join( gender_df ) %>%
+  dplyr::group_by( lvl, gender ) %>%
+  dplyr::summarise(number=dplyr::n())
+
+percAssigned <-
+  round(100*(1-sum(sni2020$number[is.na(sni2020$gender)])/sum(sni2020$number)))
+
+```
+
+Este paquete puede predecir el género de `r round(percAssigned)`% de los investigadores, es decir, `r sum(sni2020$number[!is.na(sni2020$gender)])` de un total de `r sum(sni2020$number)` investigadores. 
+
+## Resultado
+
+El gráfico a continuación, muestra el porcentage de mujeres (eje de las $y$) en cada categoría del
+*SNI* (eje de las $x$), ordenado con respecto al rango de la categoría. Los rangos más altos están hacia 
+la derecha del gráfico. 
+
+```{r, fig.height=3.3, fig.width=3.75}
+sni2020 %>%
+  dplyr::filter( !is.na(gender) ) %>%
+  tidyr::pivot_wider( names_from="gender", values_from="number" ) %>%
+  dplyr::mutate( 
+    tot=sum(female+male), 
+    fracFemales=100*female/tot, 
+    lab=sprintf("%d%%", round(fracFemales))) %>%
+  as.data.frame() %>%
+  ggplot( aes( lvl, fracFemales, group = 1, label=lab) ) +
+  geom_point() +
+  geom_line() +
+  geom_text(nudge_x = -0.2, nudge_y = -2) +
+  ylim(25, 75) +
+  geom_hline(yintercept=51, col="red", alpha=0.8, linetype="dashed") +
+  labs(x="Nivel SNI", y="% de mujeres", title="Resultados SNI 2020") +
+  panel_border(colour="black") +
+  theme( axis.line=element_blank(), axis.text.x=element_text(angle=25, hjust=1) )
+```
+
+Los gráfico muestra el sesgo de género reflejado en la convocatoria de *SNI* 2020 y cómo el sesgo
+empeora conforme el rango del *SNI* es más alto. La población de mujeres en el mundo es del 51% (la línea roja
+en el gráfico), y es evidente que **el porcentaje de mujeres está muy por debajo del 51% y 
+empeora conforme el rango del *SNI* aumenta. Sólo un tercio de los investigadores del máximo nivel 
+son mujeres.** 
+
+¡Mucho trabajo es necesario para mejorar esta situación! Yo pienso que si se quiere lograr
+igualdad de género en poco tiempo, **se necesitan medidas drásticas en los criterios de 
+evaluación del *SNI*.**
+
+## Reproducibilidad
+
+```{r}
+sessionInfo()
+```
