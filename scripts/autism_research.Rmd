@@ -1,0 +1,67 @@
+
+
+```{r}
+library(magrittr)
+
+autismGrants <- dplyr::bind_rows( lapply( 
+  list.files(".", pattern="Autism.*csv"), function(x){
+    autismGrants <- read.csv(x, 1)
+    autismGrants <- autismGrants %>% 
+      dplyr::mutate( 
+        Amount = as.numeric(gsub( "\\$|,| ", "", as.character(autismGrants$Amount) ) ) )
+  } ) )
+
+autismGrants %>%
+  dplyr::group_by( FY ) %>%
+  dplyr::summarize( total=sum(Amount) ) 
+
+autismGrants %>%
+  dplyr::group_by( FY, Funding.IC ) %>%
+  dplyr::summarize( total=sum(Amount) ) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by( FY ) %>%
+  dplyr::mutate( percentage=100*total/sum(total) ) %>%
+  tidyr::pivot_wider(names_from="FY", 
+                     values_from=c("total", "percentage"), 
+                     values_fill=list(total=0, percentage=0)) %>%
+  write.csv(file="autism_funding.csv", quote=FALSE, row.names=FALSE)
+
+```
+
+```{r fig.height=3.5, width=5}
+library(ggplot2)
+library(cowplot)
+theme_set(theme_cowplot())
+
+autismGrants %>%
+  dplyr::group_by( FY, Funding.IC ) %>%
+  dplyr::summarize( total=sum(Amount) ) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by( FY ) %>%
+  dplyr::mutate( percentage=100*total/sum(total) ) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(Funding.IC=forcats::fct_reorder(Funding.IC, total, mean,.desc = TRUE)) %>%
+  ggplot( aes( Funding.IC, total/1000, col=factor(FY) )) +
+  geom_point() +
+  labs(y="Funding (x 1,000 USD)", x="Funding agency", col="Year", 
+       title="Autism research funding") +
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+
+```
+
+
+```{r fig.height=3.5, width=5}
+autismGrants %>%
+  dplyr::group_by( FY, Funding.IC ) %>%
+  dplyr::summarize( total=sum(Amount) ) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by( FY ) %>%
+  dplyr::mutate( percentage=100*total/sum(total) ) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(Funding.IC=forcats::fct_reorder(Funding.IC, total, mean,.desc = TRUE)) %>%
+  ggplot( aes( Funding.IC, percentage, col=factor(FY) )) +
+  geom_point() +
+  labs(y="Percentage of funding", x="Funding agency", col="Year", 
+       title="Autism research funding") +
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+```

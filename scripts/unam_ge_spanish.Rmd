@@ -1,19 +1,13 @@
 ---
-title: "La brecha salarial de género del profesorado de la UNAM en el 2019"
+title: "La brecha salarial de género en puestos académicos de la UNAM en el 2019"
 author: "Alejandro Reyes"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output:
-  html_document:
-    toc: no
-    toc_depth: 2
-    toc_float: yes
 ---
 
 La brecha salarial de género es la diferencia promedio de ingresos entre hombres y mujeres. Según la Organización para la Cooperación y el Desarrollo Económico, la brecha salarial de género fue del 13.5% a nivel mundial y del 14% en México en el año 2018 [^1]. Las razones detrás de la brecha salarial incluyen la discriminación, la segregación ocupacional y los roles de género establecidos por la sociedad. Estudios de investigación han estimado que las brechas salariales de género no desaparecerán antes del año 2109 [^2].
 
 La Universidad Nacional Autónoma de México (UNAM) es una de las universidades más grandes de América Latina. Más de 10,000 investigadores trabajan en laboratorios de la UNAM. Dado que la UNAM está financiada con gasto público, la Universidad esta obligada a divulgar la información sobre contratos y salarios de trabajadores de cada facultad. Estos datos están disponibles en el [sitio web de transparencia de la UNAM](http://www.transparencia.unam.mx/obligaciones/consulta/remuneracion-profesores).
 
-Este blog describe un análisis que aborda la pregunta: **¿Existe una brecha salarial entre hombres y mujeres que trabajan en puestos académicos de la UNAM?** El código para reproducir este análisis se encuentra en [mi cuenta de Github](https://github. com/areyesq89/RandomAnalyses/blob/master/scripts/unam_ge.Rmd).
+Este blog describe un análisis que aborda la pregunta: **¿Existe una brecha salarial entre hombres y mujeres que trabajan en puestos académicos de la UNAM?** El código para reproducir este análisis se encuentra en [mi cuenta de Github](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/unam_ge.Rmd).
 
 [^1]: https://data.oecd.org/earnwage/gender-wage-gap.htm
 [^2]: https://www.theguardian.com/society/2011/aug/31/cmi-equal-pay-report
@@ -61,7 +55,7 @@ Estos datos incluyen nombres completos, salario mensual, rango académico y facu
 
 Luego, intenté asignar una identidad de género a cada miembro del profesorado con base en sus nombre de pila. En mi primer intento, hice catálogos de nombres masculinos y femeninos bajando programáticamente datos de Wikipedia (el código para eso se puede encontrar [aquí](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/WikipediaParseNameCatalogs.Rmd)). Después me hicieron notar un paquete de R llamado [*gender*](https://cran.r-project.org/web/packages/gender/index.html), que utiliza datos de seguridad social y de censos de Estados Unidos para asignar una identidad de género a cada nombre. Al final, utilicé el paquete *gender* por ser una estrategia superior y más limpia que mis catálogos de nombres.
 
-En México, es común que las personas tengan más de un nombre de pila, y nombres como "María José" pueden ser complicados, ya que "María" es un nombre femenino, "José" es un nombre masculino y la combinación de ambos "María José", es un nombre dado a mujeres. En estos casos, consideré tanto la identidad de género del primer nombre de pila así como el la identidad de género consenso de los diferentes nombres de pila. En general, estas dos estrategias dieron resultados casi idénticos. Para los investigadores con un solo nombre de pila, la asignación fue sencilla. Para los investigadores con más de un nombre, asigné una identidad de género ya sea usando el primer nombre de pila o el consenso de los nombres individuales en los casos en el que el primer nombre de pila no fue informativo. **Una consideración importante es que la identidad de género asignada por mi análisis toma los valores de "hombre" y "mujer" y como resultado, no pude incluir a las personas que experimentan su identidad de género fuera de estas dos categorías.**
+En México, es común que las personas tengan más de un nombre de pila, y nombres como "María José" pueden ser complicados, ya que "María" es un nombre femenino, "José" es un nombre masculino y la combinación de ambos "María José", es un nombre dado a mujeres. En estos casos, consideré tanto la identidad de género del primer nombre de pila así como el la identidad de género consenso de los multiples nombres de pila. En general, estas dos estrategias dieron resultados casi idénticos. Para los investigadores con un solo nombre de pila, la asignación fue sencilla. Para los investigadores con más de un nombre, asigné una identidad de género ya sea usando el primer nombre de pila o el consenso de los nombres individuales en los casos en el que el primer nombre de pila no fue informativo. **Una consideración importante es que la identidad de género asignada por mi análisis toma los valores de "hombre" y "mujer" y como resultado, no pude incluir a las personas que experimentan su identidad de género fuera de estas dos categorías.**
 
 ```{r}
 
@@ -113,7 +107,7 @@ payData$gender[is.na(payData$gender)] <- "Unknown"
 
 ```
 
-Usando esta estrategia, pude asignar una identidad de género a `r format(sum(payData$gender %in% c("Male", "Female")), big.mark=",")`, o `r round(100*(sum(payData$gender %in% c("Male", "Female"))/nrow(payData)))`%  de los profesores e investigadores de la UNAM. De éstos, `r format( sum(payData$gender %in% "Female"), big.mark=",")` (`r round(100*sum(payData$gender %in% "Female")/sum(payData$gender %in% c("Male", "Female")))`%) fueron mujeres. Este estimado del porcentage de mujeres es consistente con los [reportes que la misma UNAM.](https://www.gaceta.unam.mx/vive-la-unam-proceso-de-avance-en-igualdad-de-genero/).
+Usando esta estrategia, pude asignar una identidad de género a `r format(sum(payData$gender %in% c("Male", "Female")), big.mark=",")`, o `r round(100*(sum(payData$gender %in% c("Male", "Female"))/nrow(payData)))`%  de los profesores e investigadores de la UNAM. De éstos, `r format( sum(payData$gender %in% "Female"), big.mark=",")` (`r round(100*sum(payData$gender %in% "Female")/sum(payData$gender %in% c("Male", "Female")))`%) fueron mujeres. Este estimado del porcentage de mujeres es consistente con los [reportes que la misma UNAM.](https://www.gaceta.unam.mx/vive-la-unam-proceso-de-avance-en-igualdad-de-genero/)
 
 # Las posiciones de más alto rango están ocupadas principalmente por hombres
 
@@ -221,7 +215,7 @@ Luego hice una pregunta ligeramente distinta: **¿Existe una brecha salarial de 
 
 Para responder a esta pregunta, hice una regresión lineal
 
-$$y_{i} = \beta_{0} + \beta_{1}^{female}x_{1i} + \sum_{j=2}^{q} {{\beta}_{j}^{contract}x_{ji}} + 
+$$y_{i} = \beta_{0} + \beta_{1}^{female}x_{1i} + \sum_{j=2}^{q} {\beta_{j}^{contract}x_{ji}} + 
 \epsilon_{i}, $$
 
 donde $y_ {i}$ es el salario del individuo $i$ y $q$ es el número de posibles contratos. $\beta_{0}$ es el coeficiente de intercepción, que estima el salario promedio para los hombres que tienen un contrato que se selecciona arbitrariamente como el nivel base. $x_{1i}$ es una variable indicadora que es igual a $1$ si el individuo $i$ es una mujer y es igual a $0$ si el individuo $i$ es un hombre. $x_{ji}$ son $q-1$ variables indicadoras que son iguales a 1 si el individuo $i$ tiene un contrato $j$ y son iguales a $0$ si el individuo $i$ no tiene el contrato $j$. $\epsilon_{i}$ es el error que sigue una distribución normal.
@@ -259,7 +253,7 @@ pvalLm
 
 ```
 
-El valor $p$ de un análisis de varianza indica que existe una diferencia significativa en los salarios que las mujeres ganan en comparación con los hombres que trabajan con los mismos contratos. **El coeficiente resultante $\beta_{1}^{femenino}$ indica que las mujeres ganan en promedio `r round (coefFemale)` pesos más que los hombres.** Este resultado no es intuitivo dado que históricamente, debido a la discriminación por género, los hombres ganan más que las mujeres.
+El valor $p$ de un análisis de varianza indica que existe una diferencia significativa en los salarios que las mujeres ganan en comparación con los hombres que trabajan con los mismos contratos. **El coeficiente resultante $\beta_{1}^{female}$ indica que las mujeres ganan en promedio `r round (coefFemale)` pesos más que los hombres.** Este resultado no es intuitivo dado que históricamente, debido a la discriminación por género, los hombres ganan más que las mujeres.
 
 Para averiguar la razón de estas brechas salariales, analicé la diferencia de salarios en cada contrato individualmente. Para cada contrato, pregunté si había diferencias en los salarios entre los miembros dependiendo de su identidad de género.
 

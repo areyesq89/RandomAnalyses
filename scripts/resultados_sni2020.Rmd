@@ -19,7 +19,7 @@ de investigación del SNI y el sesgo es mayor conforme aumenta el rango del *SNI
 La Dra. Álvarez-Buylla, directora de *CONACYT*, ha expresado su preocupación por el sesgo de género 
 que existe en el *SNI* y su compromiso a mejorar la situación actual. Dado que los resultados de la
 convocatoria del *SNI* del 2020 fueron publicadas hace algunos días, me dio curiosidad **¿Qué tanto se ve reflejado
-el sesgo de género en los resultados de la convocatoria del *SNI* 2020?** A continuación presento un análisis "dominguero".
+el sesgo de género en los resultados de la convocatoria del *SNI* 2020?** A continuación presento un análisis "dominguero". El código está disponible en [este repositorio de *GitHub*](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/resultados_sni2020.Rmd). 
 
 ## Procesamiento de datos
 
@@ -116,11 +116,10 @@ sni2020 %>%
   theme( axis.line=element_blank(), axis.text.x=element_text(angle=25, hjust=1) )
 ```
 
-Los gráfico muestra el sesgo de género reflejado en la convocatoria de *SNI* 2020 y cómo el sesgo
-empeora conforme el rango del *SNI* es más alto. La población de mujeres en el mundo es del 51% (la línea roja
-en el gráfico), y es evidente que **el porcentaje de mujeres está muy por debajo del 51% y 
-empeora conforme el rango del *SNI* aumenta. Sólo un tercio de los investigadores del máximo nivel 
-son mujeres.** 
+El gráfico muestra el sesgo de género reflejado en la convocatoria de *SNI* 2020. La población de 
+mujeres en el mundo es del 51% (la línea rojaen el gráfico), y es evidente que **el porcentaje de 
+mujeres está muy por debajo del 51% en todos los rangos y el porcentaje decrece conforme el rango 
+del *SNI* aumenta. Sólo un tercio de los investigadores del máximo nivel son mujeres.** 
 
 ¡Mucho trabajo es necesario para mejorar esta situación! Yo pienso que si se quiere lograr
 igualdad de género en poco tiempo, **se necesitan medidas drásticas en los criterios de 

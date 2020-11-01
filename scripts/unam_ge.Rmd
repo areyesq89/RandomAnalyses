@@ -1,12 +1,6 @@
 ---
-title: "The gender pay gap of UNAM's faculty in the year 2019"
+title: "UNAM's faculty gender pay gap in the year 2019"
 author: "Alejandro Reyes"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output:
-  html_document:
-    toc: no
-    toc_depth: 2
-    toc_float: yes
 ---
 
 The gender wage gap is the average difference in income between men and women. According to the Organisation for Economic Cooperation and Development, in 2018 the gender wage gap was 13.5% globally and 14% in Mexico [^1]. The reasons behind the wage gap include discrimination, occupational segregation and gender roles established by society. Research studies have estimated that gender wage gaps may not disappear before 2109 [^2]. 
@@ -221,7 +215,7 @@ Then I asked a sligthly different question: **is there a gender pay gap for facu
 
 To answer this question, I fitted a linear model
 
-$$y_{i} = \beta_{0} + \beta_{1}^{female}x_{1i} + \sum_{j=2}^{q} {{\beta}_{j}^{contract}x_{ji}} + 
+$$y_{i} = \beta_{0} + \beta_{1}^{female}x_{1i} + \sum_{j=2}^{q} {\beta_{j}^{contract}x_{ji}} + 
 \epsilon_{i}, $$
 
 where $y_{i}$ is the salary of individual $i$ and $q$ is the number of possible contracts. $\beta_{0}$ is the intercept term, which estimates the mean salary for men that have a contract that is arbitrarily selected as base level. $x_{1i}$ is a dummy variable that is equal to $1$ if individual $i$ is a female and is equal to $0$ if individual $i$ is a male. $x_{ji}$ are $q-1$ dummy variables that are equal to 1 if individual $i$ has a contract $j$ and are equal to $0$ if individual $i$ does not have contract $j$. $\epsilon_{i}$ is the error term that is normally distributed.

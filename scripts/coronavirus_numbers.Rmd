@@ -1,0 +1,25 @@
+
+
+```{r}
+library(coronavirus)
+library(ggplot2)
+library(magrittr)
+
+data(coronavirus)
+
+coronavirus <- coronavirus %>%
+  dplyr::group_by( Country.Region ) %>%
+  dplyr::arrange( date ) %>%
+  dplyr::mutate( totCases=cumsum(cases ) ) %>%
+  as.data.frame()
+
+coronavirus %>%
+  head
+
+coronavirus %>%
+  ggplot( aes(date, log10(totCases), col=Country.Region ) ) +
+  geom_point() +
+  geom_line() +
+  theme(legend.pos="none")
+
+```
