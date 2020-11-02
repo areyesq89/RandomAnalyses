@@ -21,6 +21,8 @@ que existe en el *SNI* y su compromiso a mejorar la situación actual. Dado que 
 convocatoria del *SNI* del 2020 fueron publicadas hace algunos días, me dio curiosidad **¿Qué tanto se ve reflejado
 el sesgo de género en los resultados de la convocatoria del *SNI* 2020?** A continuación presento un análisis "dominguero". El código está disponible en [este repositorio de *GitHub*](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/resultados_sni2020.Rmd). 
 
+**Aclaración Nov 2, 2020**: El análisis está enfocado en ver como se refleja en los resultados de la convocatoria un problema de desigualdad de oportunidades de muchos años. Este análisis no analiza sesgos de los evaluadores o de las decisiones de la convocatoria SNI 2020. 
+
 ## Procesamiento de datos
 
 El código a continuación, baja el *pdf* con los resultados de la convocatoria del *SNI* del año 2020, captura los datos 
@@ -121,9 +123,7 @@ mujeres en el mundo es del 51% (la línea rojaen el gráfico), y es evidente que
 mujeres está muy por debajo del 51% en todos los rangos y el porcentaje decrece conforme el rango 
 del *SNI* aumenta. Sólo un tercio de los investigadores del máximo nivel son mujeres.** 
 
-¡Mucho trabajo es necesario para mejorar esta situación! Yo pienso que si se quiere lograr
-igualdad de género en poco tiempo, **se necesitan medidas drásticas en los criterios de 
-evaluación del *SNI*.**
+¡Mucho trabajo es necesario para mejorar esta situación!
 
 ## Reproducibilidad
 
