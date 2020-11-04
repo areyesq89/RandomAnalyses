@@ -1,5 +1,5 @@
 ---
-title: "Mujeres en los resultados de la convocatoria SNI 2020"
+title: "Brecha de género en investigación reflejada en los resultados de la convocatoria SNI 2020"
 author: "Alejandro Reyes"
 ---
 
@@ -9,17 +9,16 @@ knitr::opts_chunk$set(message=FALSE, warnings=FALSE)
 
 
 Los resultados de la convocatoria del Sistema Nacional de Investigadores del año 2020 se acaban de publicar.
-**¿Cómo están estos resultados con respecto a igualdad de género?**
+**¿Cómo se refleja la brecha de género en investigación en los resultados de la convocatoria?**
 
 Hace algunos meses, hice [un blogpost](http://alejandroreyes.org/sesgo-de-g%C3%A9nero-en-el-SNI-de-CONACYT/) en 
-el que analicé el sesgo de género que existe en el [Sistema Nacional de Investigadores (*SNI*)](https://www.conacyt.gob.mx/index.php/el-conacyt/sistema-nacional-de-investigadores) del Consejo Nacional
-de Ciencia y Tecnología (*CONACYT*). Entre otras cosas, noté que **el sesgo de género es evidente en todas las areas
+el que analicé cómo la brecha de género en ingestigación se refleja en el [Sistema Nacional de Investigadores (*SNI*)](https://www.conacyt.gob.mx/index.php/el-conacyt/sistema-nacional-de-investigadores) del Consejo Nacional
+de Ciencia y Tecnología (*CONACYT*). Entre otras cosas, noté que **el sesgo es evidente en todas las areas
 de investigación del SNI y el sesgo es mayor conforme aumenta el rango del *SNI***. En algunas ramas de investigación, el porcentaje de mujeres en los rangos mayores es menor al 10%. ¡Terrible!
 
-La Dra. Álvarez-Buylla, directora de *CONACYT*, ha expresado su preocupación por el sesgo de género 
+La Dra. Álvarez-Buylla, directora de *CONACYT*, ha expresado su preocupación por la brecha de género 
 que existe en el *SNI* y su compromiso a mejorar la situación actual. Dado que los resultados de la
-convocatoria del *SNI* del 2020 fueron publicadas hace algunos días, me dio curiosidad **¿Qué tanto se ve reflejado
-el sesgo de género en los resultados de la convocatoria del *SNI* 2020?** A continuación presento un análisis "dominguero". El código está disponible en [este repositorio de *GitHub*](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/resultados_sni2020.Rmd). 
+convocatoria del *SNI* del 2020 fueron publicadas hace algunos días, me dio curiosidad **¿Qué tanto se ve reflejado la brecha de género en investigación en los resultados de la convocatoria del *SNI* 2020?** A continuación presento un análisis "dominguero". El código está disponible en [este repositorio de *GitHub*](https://github.com/areyesq89/RandomAnalyses/blob/master/scripts/resultados_sni2020.Rmd). 
 
 **Aclaración Nov 2, 2020**: El análisis está enfocado en ver como se refleja en los resultados de la convocatoria un problema de desigualdad de oportunidades de muchos años. Este análisis no analiza sesgos de los evaluadores o de las decisiones de la convocatoria SNI 2020. 
 
@@ -118,12 +117,12 @@ sni2020 %>%
   theme( axis.line=element_blank(), axis.text.x=element_text(angle=25, hjust=1) )
 ```
 
-El gráfico muestra el sesgo de género reflejado en la convocatoria de *SNI* 2020. La población de 
-mujeres en el mundo es del 51% (la línea rojaen el gráfico), y es evidente que **el porcentaje de 
+El gráfico muestra el sesgo de género en investigación reflejado en la convocatoria del *SNI* 2020. La población de 
+mujeres en el mundo es del 51% (la línea roja en el gráfico), y es evidente que **el porcentaje de 
 mujeres está muy por debajo del 51% en todos los rangos y el porcentaje decrece conforme el rango 
 del *SNI* aumenta. Sólo un tercio de los investigadores del máximo nivel son mujeres.** 
 
-¡Mucho trabajo es necesario para mejorar esta situación!
+Este análisis no demuestra que el sesgo observado proviene de las evaluaciones del SNI, lo observado es probablemente un reflejo del sesgo que existe en la población de investigadores. De cualquier forma, ¡Mucho trabajo es necesario para mejorar esta situación!
 
 ## Reproducibilidad
 
